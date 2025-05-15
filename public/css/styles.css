@@ -1,0 +1,94 @@
+/* General Styles */
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f8f9fa;
+}
+
+.container {
+  flex: 1;
+}
+
+/* Movie Cards */
+.card {
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.card-img-top {
+  height: 200px;
+  object-fit: cover;
+}
+
+/* Rating Stars */
+.rating-star {
+  cursor: pointer;
+  font-size: 1.5rem;
+  margin-right: 5px;
+}
+
+.rating-star.active {
+  color: #ffc107;
+}
+
+.rating-star.hover {
+  color: #ffdb70;
+}
+
+/* Movie Detail Page */
+.rating-selector {
+  font-size: 1.5rem;
+}
+
+/* Navbar */
+.navbar-brand {
+  font-weight: bold;
+}
+
+/* Footer */
+footer {
+  margin-top: auto;
+}
+
+/* Authentication Pages */
+.auth-container {
+  max-width: 500px;
+  margin: 2rem auto;
+}
+
+/* Profile Page */
+.profile-header {
+  background-color: #f1f1f1;
+  padding: 2rem 0;
+  margin-bottom: 2rem;
+  border-radius: 5px;
+}
+
+/* Admin Dashboard */
+.stats-card {
+  text-align: center;
+  padding: 1.5rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+
+.stats-card h2 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .card-img-top {
+    height: 180px;
+  }
+  
+  .rating-star {
+    font-size: 1.2rem;
+  }
+}

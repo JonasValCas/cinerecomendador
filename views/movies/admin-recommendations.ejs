@@ -1,0 +1,109 @@
+<% /* No incluir header, ya lo maneja express-ejs-layouts */ %>
+
+<!-- Establecer el título de la página -->
+<% title = 'Recomendaciones Admin' %>
+
+<h1 class="mb-4">Panel de Recomendaciones</h1>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="card mb-4">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Películas Mejor Calificadas</h5>
+      </div>
+      <div class="card-body">
+        <% if (topRatedMovies.length === 0) { %>
+          <p class="text-muted">No hay películas calificadas aún.</p>
+        <% } else { %>
+          <div class="list-group">
+            <% topRatedMovies.forEach(movie => { %>
+              <a href="/movies/<%= movie._id %>" class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                  <h6 class="mb-1"><%= movie.titulo %> (<%= movie.anio %>)</h6>
+                  <div>
+                    <% for (let i = 1; i <= 5; i++) { %>
+                      <i class="fas fa-star <%= movie.rating >= i ? 'text-warning' : 'text-secondary' %>"></i>
+                    <% } %>
+                    <span class="ms-1"><%= movie.rating.toFixed(1) %></span>
+                  </div>
+                </div>
+                <small class="text-muted"><%= movie.genero %></small>
+              </a>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card mb-4">
+      <div class="card-header bg-success text-white">
+        <h5 class="mb-0">Películas Más Calificadas</h5>
+      </div>
+      <div class="card-body">
+        <% if (mostRatedMovies.length === 0) { %>
+          <p class="text-muted">No hay películas calificadas aún.</p>
+        <% } else { %>
+          <div class="list-group">
+            <% mostRatedMovies.forEach((movie, index) => { 
+              // Find the rating count for this movie
+              const ratingData = movieRatings.find(r => r._id.equals(movie._id));
+              const count = ratingData ? ratingData.count : 0;
+            %>
+              <a href="/movies/<%= movie._id %>" class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                  <h6 class="mb-1"><%= movie.titulo %> (<%= movie.anio %>)</h6>
+                  <span class="badge bg-primary rounded-pill"><%= count %> calificaciones</span>
+                </div>
+                <small class="text-muted"><%= movie.genero %></small>
+              </a>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header bg-info text-white">
+    <h5 class="mb-0">Estadísticas Generales</h5>
+  </div>
+  <div class="card-body">
+    <div class="row text-center">
+      <div class="col-md-4">
+        <div class="card bg-light mb-3">
+          <div class="card-body">
+            <h2 class="display-4"><%= topRatedMovies.length %></h2>
+            <p class="lead">Películas en Catálogo</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card bg-light mb-3">
+          <div class="card-body">
+            <h2 class="display-4"><%= movieRatings.reduce((sum, r) => sum + r.count, 0) %></h2>
+            <p class="lead">Calificaciones Totales</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card bg-light mb-3">
+          <div class="card-body">
+            <h2 class="display-4">
+              <% 
+                const totalRating = movieRatings.reduce((sum, r) => sum + r.count, 0);
+                const avgRating = topRatedMovies.reduce((sum, m) => sum + m.rating, 0) / (topRatedMovies.length || 1);
+              %>
+              <%= avgRating.toFixed(1) %>
+            </h2>
+            <p class="lead">Calificación Promedio</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% /* No incluir footer, ya lo maneja express-ejs-layouts */ %>

@@ -1,0 +1,244 @@
+<% /* No incluir header, ya lo maneja express-ejs-layouts */ %>
+
+<!-- Establecer el título de la página -->
+<% title = movie.titulo %>
+
+<div class="movie-detail-container">
+  <!-- Contenedor para mensajes -->
+  
+  <div class="row">
+    <div class="col-md-4">
+    <img src="<%= movie.imagen || '/images/default-movie.jpg' %>" class="img-fluid rounded shadow" alt="<%= movie.titulo %>">
+    
+    <!-- Botones de acción para usuarios autenticados -->
+    <% if (locals.currentUser) { %>
+      <div class="mt-3 d-grid gap-2">
+        <!-- Botón de favoritos -->
+        <button id="favorite-btn" class="btn btn-outline-danger favorite-btn" data-movie-id="<%= movie._id %>">
+          <i class="far fa-heart"></i> Añadir a favoritos
+        </button>
+        
+        <!-- Selector de colección -->
+        <div class="card mt-2">
+          <div class="card-header bg-light">
+            <h5 class="mb-0 fs-6">Añadir a colección</h5>
+          </div>
+          <div class="card-body">
+            <form action="/collections/agregar-pelicula" method="POST">
+              <input type="hidden" name="movieId" value="<%= movie._id %>">
+              
+              <div class="mb-2">
+                <select class="form-select form-select-sm" id="collection-selector" name="collectionId" required>
+                  <option value="" disabled selected>Seleccionar colección</option>
+                  <option value="nueva">+ Crear nueva colección</option>
+                  <% if (locals.userCollections && userCollections.length > 0) { %>
+                    <% userCollections.forEach(collection => { %>
+                      <option value="<%= collection._id %>"><%= collection.nombre %></option>
+                    <% }); %>
+                  <% } %>
+                </select>
+              </div>
+              
+              <!-- Campo para nueva colección (inicialmente oculto) -->
+              <div id="nueva-coleccion-container" class="mb-2 d-none">
+                <input type="text" class="form-control form-control-sm" name="nuevaColeccion" placeholder="Nombre de la nueva colección">
+              </div>
+              
+              <button type="submit" id="add-to-collection-btn" class="btn btn-sm btn-primary w-100">
+                <i class="fas fa-plus"></i> Añadir
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <script>
+        // Mostrar/ocultar campo de nueva colección
+        document.addEventListener('DOMContentLoaded', function() {
+          const collectionSelector = document.getElementById('collection-selector');
+          const nuevaColeccionContainer = document.getElementById('nueva-coleccion-container');
+          const nuevaColeccionInput = nuevaColeccionContainer.querySelector('input');
+          
+          collectionSelector.addEventListener('change', function() {
+            if (this.value === 'nueva') {
+              nuevaColeccionContainer.classList.remove('d-none');
+              nuevaColeccionInput.required = true;
+            } else {
+              nuevaColeccionContainer.classList.add('d-none');
+              nuevaColeccionInput.required = false;
+            }
+          });
+        });
+      </script>
+    <% } %>
+  </div>
+  
+  <div class="col-md-8">
+    <h1 class="mb-2"><%= movie.titulo %> (<%= movie.anio %>)</h1>
+    <p class="badge bg-secondary mb-3"><%= movie.genero %></p>
+    
+    <div class="mb-4">
+      <div class="d-flex align-items-center mb-2">
+        <div class="me-3">
+          <% for (let i = 1; i <= 5; i++) { %>
+            <i class="fas fa-star avg-rating-star <%= avgRating >= i ? 'text-warning' : 'text-secondary' %>"></i>
+          <% } %>
+          <span class="ms-1 avg-rating-value"><%= avgRating %></span>
+        </div>
+        <span class="text-muted">(<span class="rating-count"><%= ratingCount %></span> calificaciones)</span>
+      </div>
+      
+      <% if (locals.currentUser) { %>
+        <div class="card mb-3">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <span>Tu calificación</span>
+            <% if (userRating) { %>
+              <span class="badge bg-success">Calificada</span>
+            <% } else { %>
+              <span class="badge bg-secondary">Sin calificar</span>
+            <% } %>
+          </div>
+          <div class="card-body">
+            <div class="rating-selector">
+              <div class="d-flex align-items-center mb-2">
+                <% for (let i = 1; i <= 5; i++) { %>
+                  <i class="fas fa-star rating-star <%= userRating >= i ? 'active' : '' %>" data-rating="<%= i %>"></i>
+                <% } %>
+                <span id="selected-rating" class="ms-2 fw-bold"><%= userRating ? userRating : 'Sin calificar' %></span>
+              </div>
+              
+              <div class="mt-3">
+                <label class="form-label">O califica con un número:</label>
+                <div class="d-flex align-items-center">
+                  <div class="btn-group" role="group" aria-label="Calificación numérica">
+                    <% for (let i = 1; i <= 5; i++) { %>
+                      <button type="button" class="btn btn-outline-primary rating-number <%= userRating == i ? 'active' : '' %>" data-rating="<%= i %>"><%= i %></button>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-3 small text-muted">
+                Haz clic en una estrella o número para calificar esta película.
+              </div>
+            </div>
+            <input type="hidden" id="movie-id" value="<%= movie._id %>">
+          </div>
+        </div>
+      <% } else { %>
+        <div class="alert alert-info">
+          <a href="/auth/login">Inicia sesión</a> para calificar esta película.
+        </div>
+      <% } %>
+    </div>
+    
+    <h4>Descripción</h4>
+    <p class="lead"><%= movie.descripcion %></p>
+    
+    <div class="mt-4 d-flex flex-wrap gap-2">
+      <a href="/movies" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Volver al catálogo
+      </a>
+      
+      <% if (locals.currentUser) { %>
+        <a href="/reviews/movie/<%= movie._id %>/nueva" class="btn btn-primary">
+          <i class="fas fa-pen"></i> Escribir reseña
+        </a>
+      <% } %>
+      
+      <a href="/reviews/movie/<%= movie._id %>" class="btn btn-outline-info">
+        <i class="fas fa-comments"></i> Ver reseñas (<%= locals.reviewCount || 0 %>)
+      </a>
+    </div>
+  </div>
+</div>
+
+<% if (locals.currentUser) { %>
+<%- contentFor('script') %>
+<script src="/js/favorites.js"></script>
+<script src="/js/rating-system.js"></script>
+<script src="/js/movie-detail.js"></script>
+<% } %>
+
+<!-- Sección de reseñas destacadas -->
+<div class="row mt-5">
+  <div class="col-12">
+    <h3 class="mb-3">Reseñas destacadas</h3>
+    
+    <% if (locals.featuredReviews && featuredReviews.length > 0) { %>
+      <div class="row">
+        <% featuredReviews.forEach(review => { %>
+          <div class="col-md-6 mb-3">
+            <div class="card h-100">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><%= review.titulo %></h5>
+                <div>
+                  <% for (let i = 1; i <= 5; i++) { %>
+                    <i class="fas fa-star <%= i <= review.rating ? 'text-warning' : 'text-secondary' %>"></i>
+                  <% } %>
+                </div>
+              </div>
+              <div class="card-body">
+                <p class="card-text"><%= review.contenido.length > 150 ? review.contenido.substring(0, 150) + '...' : review.contenido %></p>
+              </div>
+              <div class="card-footer text-muted">
+                <small>Por <%= review.userId.username %> | <%= new Date(review.createdAt).toLocaleDateString() %></small>
+                <div class="mt-1">
+                  <span class="badge bg-success"><i class="fas fa-thumbs-up"></i> <%= review.votosUtiles %></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+      
+      <div class="text-center mt-3">
+        <a href="/reviews/movie/<%= movie._id %>" class="btn btn-outline-primary">
+          Ver todas las reseñas (<%= locals.reviewCount || featuredReviews.length %>)
+        </a>
+      </div>
+    <% } else { %>
+      <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> No hay reseñas para esta película aún.
+        <% if (locals.currentUser) { %>
+          <a href="/reviews/movie/<%= movie._id %>/nueva" class="alert-link">Sé el primero en escribir una reseña</a>.
+        <% } else { %>
+          <a href="/auth/login" class="alert-link">Inicia sesión</a> para escribir una reseña.
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<!-- Sección de películas similares -->
+<div class="row mt-4 mb-5">
+  <div class="col-12">
+    <h3 class="mb-3">Películas similares</h3>
+    
+    <% if (locals.similarMovies && similarMovies.length > 0) { %>
+      <div class="row">
+        <% similarMovies.forEach(similarMovie => { %>
+          <div class="col-md-2 mb-3">
+            <div class="card h-100">
+              <img src="<%= similarMovie.imagen %>" class="card-img-top" alt="<%= similarMovie.titulo %>">
+              <div class="card-body">
+                <h6 class="card-title"><%= similarMovie.titulo %></h6>
+                <p class="card-text">
+                  <small class="text-muted"><%= similarMovie.anio %></small>
+                </p>
+              </div>
+              <div class="card-footer">
+                <a href="/movies/<%= similarMovie._id %>" class="btn btn-sm btn-outline-primary w-100">Ver</a>
+              </div>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+    <% } else { %>
+      <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> No hay películas similares disponibles.
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<% /* No incluir footer, ya lo maneja express-ejs-layouts */ %>

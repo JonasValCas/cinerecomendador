@@ -1,0 +1,193 @@
+// Archivo de respaldo del chat original
+// Este archivo ha sido desactivado para evitar conflictos con el chat flotante
+
+/**
+ * Script para el chat en tiempo real
+ */
+
+/*
+document.addEventListener('DOMContentLoaded', function() {
+  // Elementos para el chat flotante
+  const chatContainer = document.getElementById('chat-container');
+  const chatFloatBtn = document.getElementById('chat-float-btn');
+  const chatClose = document.getElementById('chat-close');
+  
+  // Si no existe el botón flotante o el contenedor del chat, salir
+  if (!chatFloatBtn && !chatContainer) return;
+  
+  // Si estamos en la página principal con el botón flotante
+  if (chatFloatBtn) {
+    // Manejar apertura del chat
+    chatFloatBtn.addEventListener('click', () => {
+      window.location.href = '/chat';
+    });
+    return;
+  }
+  
+  // Si estamos en la página del chat
+  if (chatContainer && chatClose) {
+    // Hacer visible el chat
+    chatContainer.classList.add('active');
+    
+    // Manejar cierre del chat
+    chatClose.addEventListener('click', () => {
+      window.location.href = '/';
+    });
+    
+    // Inicializar la funcionalidad del chat
+    initializeChat();
+  }
+});
+
+// Función para inicializar el chat
+function initializeChat() {
+  // Conectar a Socket.io
+  const socket = io();
+  
+  // Elementos del DOM
+  const messageForm = document.getElementById('message-form');
+  const messageInput = document.getElementById('message-input');
+  const messagesContainer = document.getElementById('messages');
+  const usersList = document.getElementById('users-list');
+  const toggleUsersBtn = document.getElementById('toggle-users');
+  const usersSidebar = document.getElementById('users-sidebar');
+  
+  // Obtener datos del usuario actual
+  const currentUsername = document.getElementById('current-username').value;
+  
+  // Unirse al chat cuando se conecta
+  socket.on('connect', () => {
+    console.log('Conectado al servidor de chat');
+    socket.emit('join', { username: currentUsername });
+  });
+  
+  // Manejar evento de usuario unido
+  socket.on('user joined', (data) => {
+    // Actualizar lista de usuarios
+    updateUsersList(data.users);
+    
+    // Añadir mensaje del sistema
+    addSystemMessage(data.message);
+  });
+  
+  // Manejar evento de usuario desconectado
+  socket.on('user left', (data) => {
+    // Actualizar lista de usuarios
+    updateUsersList(data.users);
+    
+    // Añadir mensaje del sistema
+    addSystemMessage(data.message);
+  });
+  
+  // Manejar mensajes entrantes
+  socket.on('chat message', (data) => {
+    addMessage(data);
+  });
+  
+  // Enviar mensaje
+  messageForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    const message = messageInput.value.trim();
+    if (message) {
+      // Emitir mensaje al servidor
+      socket.emit('chat message', { message });
+      
+      // Limpiar input
+      messageInput.value = '';
+      messageInput.focus();
+    }
+  });
+  
+  // Mostrar/ocultar lista de usuarios en móvil
+  if (toggleUsersBtn) {
+    toggleUsersBtn.addEventListener('click', () => {
+      usersSidebar.classList.toggle('show');
+    });
+  }
+  
+  // Función para actualizar lista de usuarios
+  function updateUsersList(users) {
+    usersList.innerHTML = '';
+    
+    users.forEach(username => {
+      const userBadge = document.createElement('span');
+      userBadge.className = `badge ${username === currentUsername ? 'bg-primary' : 'bg-secondary'} me-1 mb-1`;
+      userBadge.innerHTML = `<i class="fas fa-user me-1"></i>${username}`;
+      usersList.appendChild(userBadge);
+    });
+    
+    // Actualizar contador de usuarios
+    const userCount = document.getElementById('user-count');
+    if (userCount) {
+      userCount.textContent = users.length;
+    }
+  }
+  
+  // Función para añadir mensaje del sistema
+  function addSystemMessage(message) {
+    const div = document.createElement('div');
+    div.className = 'system-message my-2';
+    
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-info py-1 px-3';
+    alert.textContent = message;
+    
+    div.appendChild(alert);
+    messagesContainer.appendChild(div);
+    
+    // Scroll al fondo
+    scrollToBottom();
+  }
+  
+  // Función para añadir mensaje
+  function addMessage(data) {
+    const { userId, username, message, timestamp } = data;
+    const isCurrentUser = username === currentUsername;
+    const isBot = userId === 'bot';
+    
+    const div = document.createElement('div');
+    div.className = `message d-flex ${isCurrentUser ? 'justify-content-end' : 'justify-content-start'} ${isBot ? 'bot-message' : ''}`;
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message-bubble ${isCurrentUser ? 'own-message' : 'other-message'} position-relative`;
+    
+    const header = document.createElement('div');
+    header.className = 'message-header d-flex justify-content-between mb-1';
+    
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'fw-bold';
+    nameSpan.textContent = isCurrentUser ? 'Tú' : username;
+    
+    if (isBot) {
+      nameSpan.innerHTML = `<i class="fas fa-robot me-1"></i> ${username}`;
+    }
+    
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'text-small ms-2 opacity-75';
+    const date = new Date(timestamp);
+    timeSpan.textContent = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    header.appendChild(nameSpan);
+    header.appendChild(timeSpan);
+    
+    const content = document.createElement('div');
+    content.className = 'message-content';
+    content.textContent = message;
+    
+    messageDiv.appendChild(header);
+    messageDiv.appendChild(content);
+    div.appendChild(messageDiv);
+    
+    messagesContainer.appendChild(div);
+    
+    // Scroll al fondo
+    scrollToBottom();
+  }
+  
+  // Función para hacer scroll al fondo
+  function scrollToBottom() {
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+}
+*/

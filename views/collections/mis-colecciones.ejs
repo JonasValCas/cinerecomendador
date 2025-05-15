@@ -1,0 +1,81 @@
+<!-- Mis colecciones -->
+<div class="container mt-4">
+  <h1 class="mb-4">Mis Colecciones</h1>
+  
+  <div class="mb-4">
+    <a href="/collections" class="btn btn-primary">
+      <i class="fas fa-globe"></i> Ver Todas las Colecciones
+    </a>
+    <a href="/collections/nueva" class="btn btn-success">
+      <i class="fas fa-plus"></i> Crear Nueva Colecciu00f3n
+    </a>
+  </div>
+  
+  <% if (collections && collections.length > 0) { %>
+    <div class="row">
+      <% collections.forEach(collection => { %>
+        <div class="col-md-4 mb-4">
+          <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h5 class="card-title mb-0"><%= collection.nombre %></h5>
+              <span class="badge <%= collection.publica ? 'bg-success' : 'bg-secondary' %>">
+                <%= collection.publica ? 'Pública' : 'Privada' %>
+              </span>
+            </div>
+            <div class="card-body">
+              <% if (collection.descripcion) { %>
+                <p class="card-text"><%= collection.descripcion %></p>
+              <% } else { %>
+                <p class="card-text text-muted">Sin descripción</p>
+              <% } %>
+              
+              <p class="card-text">
+                <small class="text-muted">
+                  <i class="fas fa-film"></i> <%= collection.peliculas.length %> películas
+                </small>
+              </p>
+            </div>
+            <div class="card-footer d-flex justify-content-between">
+              <a href="/collections/<%= collection._id %>" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-eye"></i> Ver
+              </a>
+              <div>
+                <a href="/collections/<%= collection._id %>/editar" class="btn btn-outline-secondary btn-sm">
+                  <i class="fas fa-edit"></i> Editar
+                </a>
+                <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal<%= collection._id %>">
+                  <i class="fas fa-trash"></i> Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Modal de confirmación para eliminar -->
+        <div class="modal fade" id="deleteModal<%= collection._id %>" tabindex="-1" aria-labelledby="deleteModalLabel<%= collection._id %>" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel<%= collection._id %>">Confirmar eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                ¿Estás seguro de que deseas eliminar la colección "<%= collection.nombre %>"? Esta acción no se puede deshacer.
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form action="/collections/<%= collection._id %>/eliminar" method="POST" class="d-inline">
+                  <button type="submit" class="btn btn-danger">Eliminar</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+  <% } else { %>
+    <div class="alert alert-info">
+      <i class="fas fa-info-circle"></i> No tienes colecciones au00fan. u00a1Crea tu primera colecciu00f3n!
+    </div>
+  <% } %>
+</div>

@@ -1,0 +1,202 @@
+<!-- Reseñas de una película -->
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Reseñas de <%= movie.titulo %></h1>
+    
+    <div>
+      <a href="/movies/<%= movie._id %>" class="btn btn-outline-primary">
+        <i class="fas fa-arrow-left"></i> Volver a la Película
+      </a>
+      
+      <% if (user) { %>
+        <a href="/reviews/movie/<%= movie._id %>/nueva" class="btn btn-success">
+          <i class="fas fa-pen"></i> Escribir Reseña
+        </a>
+      <% } %>
+    </div>
+  </div>
+  
+  <!-- Información de la película -->
+  <div class="card mb-4">
+    <div class="row g-0">
+      <div class="col-md-2">
+        <img src="<%= movie.imagen %>" class="img-fluid rounded-start" alt="<%= movie.titulo %>">
+      </div>
+      <div class="col-md-10">
+        <div class="card-body">
+          <h5 class="card-title"><%= movie.titulo %> (<%= movie.año %>)</h5>
+          <p class="card-text"><%= movie.genero %></p>
+          
+          <!-- Calificación promedio -->
+          <div class="mb-2">
+            <% for (let i = 1; i <= 5; i++) { %>
+              <i class="fas fa-star <%= i <= movie.rating ? 'text-warning' : 'text-secondary' %>"></i>
+            <% } %>
+            <span class="ms-1"><%= movie.rating.toFixed(1) %></span>
+          </div>
+          
+          <p class="card-text"><small class="text-muted"><%= reviews.length %> reseña(s)</small></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Lista de reseñas -->
+  <% if (reviews && reviews.length > 0) { %>
+    <div class="reviews-list">
+      <% reviews.forEach(review => { %>
+        <div class="card mb-3 review-card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><%= review.titulo %></h5>
+            <div>
+              <% if (user && review.userId._id.toString() === user._id.toString()) { %>
+                <a href="/reviews/movie/<%= movie._id %>/nueva" class="btn btn-sm btn-outline-secondary">
+                  <i class="fas fa-edit"></i> Editar
+                </a>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteReviewModal<%= review._id %>">
+                  <i class="fas fa-trash"></i> Eliminar
+                </button>
+              <% } %>
+            </div>
+          </div>
+          <div class="card-body">
+            <p class="card-text"><%= review.contenido %></p>
+            
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <small class="text-muted">
+                  <i class="fas fa-user"></i> <%= review.userId.username %> | 
+                  <i class="fas fa-calendar"></i> <%= new Date(review.createdAt).toLocaleDateString() %>
+                  <% if (review.createdAt.getTime() !== review.updatedAt.getTime()) { %>
+                    | <i class="fas fa-edit"></i> Editado el <%= new Date(review.updatedAt).toLocaleDateString() %>
+                  <% } %>
+                </small>
+              </div>
+              
+              <% if (user && user._id.toString() !== review.userId._id.toString()) { %>
+                <div class="review-votes">
+                  <button class="btn btn-sm btn-outline-success vote-btn" data-review-id="<%= review._id %>" data-vote="true">
+                    <i class="fas fa-thumbs-up"></i> útil (<span class="useful-count"><%= review.votosUtiles %></span>)
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger vote-btn" data-review-id="<%= review._id %>" data-vote="false">
+                    <i class="fas fa-thumbs-down"></i> No útil (<span class="not-useful-count"><%= review.votosNoUtiles %></span>)
+                  </button>
+                </div>
+              <% } else { %>
+                <div>
+                  <span class="badge bg-success"><i class="fas fa-thumbs-up"></i> <%= review.votosUtiles %></span>
+                  <span class="badge bg-danger"><i class="fas fa-thumbs-down"></i> <%= review.votosNoUtiles %></span>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Modal para eliminar reseña -->
+        <% if (user && review.userId._id.toString() === user._id.toString()) { %>
+          <div class="modal fade" id="deleteReviewModal<%= review._id %>" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Confirmar eliminación</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  ¿Estás seguro de que deseas eliminar tu reseña? Esta acción no se puede deshacer.
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                  <form action="/reviews/<%= review._id %>/eliminar" method="POST">
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% } %>
+      <% }); %>
+    </div>
+  <% } else { %>
+    <div class="alert alert-info">
+      <i class="fas fa-info-circle"></i> No hay reseñas para esta película aun. 
+      <% if (user) { %>
+        <a href="/reviews/movie/<%= movie._id %>/nueva" class="alert-link">Se el primero en escribir una reseña</a>.
+      <% } else { %>
+        Inicia sesión para escribir una reseña.
+      <% } %>
+    </div>
+  <% } %>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Manejar votos de utilidad
+    const voteBtns = document.querySelectorAll('.vote-btn');
+    
+    voteBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const reviewId = this.getAttribute('data-review-id');
+        const isUseful = this.getAttribute('data-vote') === 'true';
+        const voteCard = this.closest('.review-card');
+        const usefulCountEl = voteCard.querySelector('.useful-count');
+        const notUsefulCountEl = voteCard.querySelector('.not-useful-count');
+        
+        // Deshabilitar botones mientras se procesa
+        const allBtns = voteCard.querySelectorAll('.vote-btn');
+        allBtns.forEach(b => b.disabled = true);
+        
+        fetch(`/reviews/${reviewId}/vote`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ util: isUseful })
+        })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              // Actualizar contadores
+              usefulCountEl.textContent = data.votosUtiles;
+              notUsefulCountEl.textContent = data.votosNoUtiles;
+              
+              // Actualizar estilos de botones
+              const usefulBtn = voteCard.querySelector('[data-vote="true"]');
+              const notUsefulBtn = voteCard.querySelector('[data-vote="false"]');
+              
+              if (data.action === 'added') {
+                if (isUseful) {
+                  usefulBtn.classList.remove('btn-outline-success');
+                  usefulBtn.classList.add('btn-success');
+                  notUsefulBtn.classList.remove('btn-danger');
+                  notUsefulBtn.classList.add('btn-outline-danger');
+                } else {
+                  notUsefulBtn.classList.remove('btn-outline-danger');
+                  notUsefulBtn.classList.add('btn-danger');
+                  usefulBtn.classList.remove('btn-success');
+                  usefulBtn.classList.add('btn-outline-success');
+                }
+              } else if (data.action === 'removed') {
+                if (isUseful) {
+                  usefulBtn.classList.remove('btn-success');
+                  usefulBtn.classList.add('btn-outline-success');
+                } else {
+                  notUsefulBtn.classList.remove('btn-danger');
+                  notUsefulBtn.classList.add('btn-outline-danger');
+                }
+              }
+            } else {
+              alert('Error al procesar el voto');
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Error de conexiu00f3n');
+          })
+          .finally(() => {
+            // Habilitar botones nuevamente
+            allBtns.forEach(b => b.disabled = false);
+          });
+      });
+    });
+  });
+</script>

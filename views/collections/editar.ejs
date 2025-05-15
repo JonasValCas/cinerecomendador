@@ -1,0 +1,57 @@
+<!-- Formulario para editar colección -->
+<div class="container mt-4">
+  <h1 class="mb-4">Editar Colección</h1>
+  
+  <div class="mb-4">
+    <a href="/collections/<%= collection._id %>" class="btn btn-outline-primary">
+      <i class="fas fa-arrow-left"></i> Volver a la Colección
+    </a>
+  </div>
+  
+  <div class="card">
+    <div class="card-body">
+      <form action="/collections/<%= collection._id %>/editar" method="POST">
+        <div class="mb-3">
+          <label for="nombre" class="form-label">Nombre de la Colección *</label>
+          <input type="text" class="form-control" id="nombre" name="nombre" value="<%= collection.nombre %>" required>
+        </div>
+        
+        <div class="mb-3">
+          <label for="descripcion" class="form-label">Descripción</label>
+          <textarea class="form-control" id="descripcion" name="descripcion" rows="3"><%= collection.descripcion || '' %></textarea>
+        </div>
+        
+        <div class="mb-3">
+          <label for="peliculas" class="form-label">Películas</label>
+          <select class="form-select" id="peliculas" name="peliculas" multiple>
+            <% movies.forEach(movie => { %>
+              <option value="<%= movie._id %>" 
+                <%= collection.peliculas.some(p => p.equals(movie._id)) ? 'selected' : '' %>>
+                <%= movie.titulo %> (<%= movie.anio %>)
+              </option>
+            <% }); %>
+          </select>
+          <small class="form-text text-muted">Mantén presionada la tecla Ctrl (o Cmd en Mac) para seleccionar múltiples películas.</small>
+        </div>
+        
+        <div class="mb-3 form-check">
+          <input type="checkbox" class="form-check-input" id="publica" name="publica" <%= collection.publica ? 'checked' : '' %>>
+          <label class="form-check-label" for="publica">Hacer esta colección pública</label>
+          <small class="form-text text-muted d-block">Las colecciones públicas son visibles para todos los usuarios.</small>
+        </div>
+        
+        <button type="submit" class="btn btn-success">
+          <i class="fas fa-save"></i> Guardar Cambios
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Mejorar la selección múltiple con un plugin de selección mejorada
+  document.addEventListener('DOMContentLoaded', function() {
+    // Si tienes alguna biblioteca como Select2, puedes inicializarla aquí
+    // Por ejemplo: $('#peliculas').select2();
+  });
+</script>

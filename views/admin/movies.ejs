@@ -1,0 +1,84 @@
+<% /* No incluir header, ya lo maneja express-ejs-layouts */ %>
+
+<!-- Establecer el título de la página -->
+<% title = 'Administrar Películas' %>
+
+<div class="container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Administrar Películas</h1>
+    <a href="/admin/movies/add" class="btn btn-primary">
+      <i class="fas fa-plus me-2"></i> Agregar Película
+    </a>
+  </div>
+  
+  <% if (locals.flash && flash.success) { %>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+      <%= flash.success %>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  <% } %>
+  
+  <% if (movies.length === 0) { %>
+    <div class="alert alert-info">
+      No hay películas en el catálogo. ¡Agrega una nueva película!
+    </div>
+  <% } else { %>
+    <div class="card shadow-sm">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th style="width: 80px">Imagen</th>
+                <th>Título</th>
+                <th>Género</th>
+                <th>Año</th>
+                <th>Rating</th>
+                <th style="width: 150px">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% movies.forEach(movie => { %>
+                <tr>
+                  <td>
+                    <img src="<%= movie.imagen %>" alt="<%= movie.titulo %>" class="img-thumbnail" style="width: 60px; height: 60px; object-fit: cover;">
+                  </td>
+                  <td><%= movie.titulo %></td>
+                  <td><%= movie.genero %></td>
+                  <td><%= movie.anio %></td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <span class="me-2"><%= movie.rating.toFixed(1) %></span>
+                      <div class="text-warning">
+                        <% for (let i = 1; i <= 5; i++) { %>
+                          <i class="<%= i <= Math.round(movie.rating) ? 'fas' : 'far' %> fa-star"></i>
+                        <% } %>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="d-flex gap-2">
+                      <a href="/admin/movies/edit/<%= movie._id %>" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-edit"></i>
+                      </a>
+                      <form action="/admin/movies/delete/<%= movie._id %>" method="POST" onsubmit="return confirm('¿Estás seguro de eliminar esta película?')">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      </form>
+                      <a href="/movies/<%= movie._id %>" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-eye"></i>
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  <% } %>
+</div>
+
+<% /* No incluir footer, ya lo maneja express-ejs-layouts */ %>

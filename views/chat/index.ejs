@@ -1,0 +1,83 @@
+<% /* No incluir header, ya lo maneja express-ejs-layouts */ %>
+
+<!-- Establecer el título de la página -->
+<% title = 'Chat de Películas' %>
+
+<% /* Los estilos se extraerán automáticamente a la sección style del layout */ %>
+<%- contentFor('style') %>
+<style>
+  .system-message .alert {
+    max-width: 80%;
+    margin: 0 auto;
+  }
+  
+  #messages-container {
+    background-color: #f8f9fa;
+    height: 300px;
+    overflow-y: auto;
+  }
+  
+  .message-header {
+    font-size: 0.85rem;
+  }
+</style>
+
+<!-- Ventana flotante del chat -->
+<div class="chat-container" id="chat-container">
+  <!-- Hidden input with current username -->
+  <input type="hidden" id="current-username" value="<%= user.username %>">
+  
+  <!-- Cabecera del chat -->
+  <div class="chat-header">
+    <div class="d-flex align-items-center">
+      <h5 class="mb-0"><i class="fas fa-film me-2"></i> Chat de Películas</h5>
+      <div class="ms-auto badge bg-primary">
+        <i class="fas fa-users me-1"></i> <span id="user-count">0</span> en línea
+      </div>
+    </div>
+    <span class="chat-close" id="chat-close"><i class="fas fa-times"></i></span>
+  </div>
+  
+  <!-- Contenido del chat -->
+  <div class="chat-body d-flex flex-column" style="flex: 1; overflow: hidden;">
+    <!-- Lista de usuarios -->
+    <div class="users-sidebar p-2 border-bottom" style="height: 100px; overflow-y: auto;">
+      <h6 class="mb-2 small">Usuarios en línea:</h6>
+      <div id="users-list" class="d-flex flex-wrap gap-1">
+        <!-- Users will be added dynamically -->
+      </div>
+    </div>
+    
+    <!-- Mensajes -->
+    <div id="messages-container" class="p-3 flex-grow-1">
+      <div id="messages" class="d-flex flex-column">
+        <!-- Welcome message -->
+        <div class="system-message text-center mb-3">
+          <div class="alert alert-info d-inline-block">
+            Bienvenido al chat de películas. ¡Sé respetuoso con los demás usuarios!
+          </div>
+        </div>
+        <!-- Messages will be added dynamically -->
+      </div>
+    </div>
+    
+    <!-- Input de mensaje -->
+    <div class="chat-footer p-2 border-top">
+      <form id="message-form" class="d-flex">
+        <input type="text" id="message-input" class="form-control me-2" placeholder="Escribe un mensaje..." autocomplete="off">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- contentFor('script') %>
+<!-- Socket.io client -->
+<script src="/socket.io/socket.io.js"></script>
+
+<!-- Chat script -->
+<script src="/js/chat.js"></script>
+
+<% /* No incluir footer, ya lo maneja express-ejs-layouts */ %>

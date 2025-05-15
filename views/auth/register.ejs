@@ -1,0 +1,50 @@
+<% /* No incluir header, ya lo maneja express-ejs-layouts */ %>
+
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card shadow">
+      <div class="card-header bg-primary text-white text-center">
+        <h4 class="mb-0">Crear Cuenta</h4>
+      </div>
+      <div class="card-body">
+        <% if (locals.error) { %>
+          <div class="alert alert-danger">
+            <%= error %>
+          </div>
+        <% } %>
+        
+        <form action="/auth/register" method="POST">
+          <div class="mb-3">
+            <label for="username" class="form-label">Nombre de Usuario</label>
+            <input type="text" class="form-control" id="username" name="username" value="<%= locals.username || '' %>" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" name="email" value="<%= locals.email || '' %>" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="password" class="form-label">Contraseña</label>
+            <input type="password" class="form-control" id="password" name="password" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="confirmPassword" class="form-label">Confirmar Contraseña</label>
+            <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required>
+          </div>
+          
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary">Registrarse</button>
+          </div>
+        </form>
+        
+        <div class="mt-3 text-center">
+          <p>No una cuenta? <a href="/auth/login">Inicia sesion aquí</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% /* No incluir footer, ya lo maneja express-ejs-layouts */ %>

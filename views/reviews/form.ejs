@@ -1,0 +1,167 @@
+<!-- Formulario para crear/editar reseña -->
+<div class="container mt-4">
+  <h1 class="mb-4"><%= review ? 'Editar Reseña' : 'Escribir Reseña' %></h1>
+  
+  <div class="mb-4 d-flex gap-2">
+    <a href="/movies/<%= movie._id %>" class="btn btn-outline-primary">
+      <i class="fas fa-arrow-left"></i> Volver a la Película
+    </a>
+    
+    <!-- Botón de favoritos -->
+    <button id="favorite-btn" class="btn btn-outline-danger favorite-btn" data-movie-id="<%= movie._id %>">
+      <i class="far fa-heart"></i> Añadir a favoritos
+    </button>
+  </div>
+  
+  <!-- Información de la película -->
+  <div class="card mb-4">
+    <div class="row g-0">
+      <div class="col-md-2">
+        <img src="<%= movie.imagen %>" class="img-fluid rounded-start" alt="<%= movie.titulo %>">
+      </div>
+      <div class="col-md-10">
+        <div class="card-body">
+          <h5 class="card-title"><%= movie.titulo %> (<%= movie.anio %>)</h5>
+          <p class="card-text"><%= movie.genero %></p>
+          
+          <!-- Calificación promedio -->
+          <div class="mb-2">
+            <% for (let i = 1; i <= 5; i++) { %>
+              <i class="fas fa-star <%= i <= movie.rating ? 'text-warning' : 'text-secondary' %>"></i>
+            <% } %>
+            <span class="ms-1"><%= movie.rating.toFixed(1) %></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Formulario de reseña -->
+  <div class="card">
+    <div class="card-body">
+      <form action="/reviews/movie/<%= movie._id %>" method="POST">
+        <div class="mb-3">
+          <label for="titulo" class="form-label">Título de la reseña *</label>
+          <input type="text" class="form-control" id="titulo" name="titulo" value="<%= review ? review.titulo : '' %>" required>
+        </div>
+        
+        <div class="mb-3">
+          <label for="contenido" class="form-label">Contenido de la reseña *</label>
+          <textarea class="form-control" id="contenido" name="contenido" rows="5" required><%= review ? review.contenido : '' %></textarea>
+        </div>
+        
+        <div class="mb-4">
+          <label class="form-label">Tu calificación para esta película</label>
+          <div class="rating-selector-review">
+            <div class="stars mb-2">
+              <% for (let i = 1; i <= 5; i++) { %>
+                <i class="fas fa-star review-star <%= userRating && userRating.rating >= i ? 'active' : '' %>" data-rating="<%= i %>"></i>
+              <% } %>
+            </div>
+            
+            <div class="btn-group mb-2">
+              <% for (let i = 1; i <= 5; i++) { %>
+                <button type="button" class="btn btn-sm <%= userRating && userRating.rating === i ? 'btn-primary' : 'btn-outline-primary' %> review-number" data-rating="<%= i %>"><%= i %></button>
+              <% } %>
+            </div>
+            
+            <input type="hidden" name="rating" id="selected-rating-value" value="<%= userRating ? userRating.rating : '' %>">
+          </div>
+        </div>
+        
+        <button type="submit" class="btn btn-success">
+          <i class="fas fa-save"></i> <%= review ? 'Actualizar Reseña' : 'Publicar Reseña' %>
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const stars = document.querySelectorAll('.review-star');
+    const numbers = document.querySelectorAll('.review-number');
+    const ratingInput = document.getElementById('selected-rating-value');
+    
+    // Función para actualizar la visualización de estrellas y números
+    function updateRatingDisplay(rating) {
+      // Actualizar estrellas
+      stars.forEach(star => {
+        const starRating = parseInt(star.getAttribute('data-rating'));
+        if (starRating <= rating) {
+          star.classList.add('active');
+        } else {
+          star.classList.remove('active');
+        }
+      });
+      
+      // Actualizar botones numéricos
+      numbers.forEach(btn => {
+        const btnRating = parseInt(btn.getAttribute('data-rating'));
+        if (btnRating === rating) {
+          btn.classList.add('btn-primary');
+          btn.classList.remove('btn-outline-primary');
+        } else {
+          btn.classList.remove('btn-primary');
+          btn.classList.add('btn-outline-primary');
+        }
+      });
+      
+      // Actualizar el valor del input oculto
+      ratingInput.value = rating;
+    }
+    
+    // Manejar clic en estrellas
+    stars.forEach(star => {
+      star.addEventListener('click', function() {
+        const rating = parseInt(this.getAttribute('data-rating'));
+        updateRatingDisplay(rating);
+      });
+      
+      // Efecto hover
+      star.addEventListener('mouseenter', function() {
+        const rating = parseInt(this.getAttribute('data-rating'));
+        stars.forEach(s => {
+          const starRating = parseInt(s.getAttribute('data-rating'));
+          if (starRating <= rating) {
+            s.classList.add('hover');
+          } else {
+            s.classList.remove('hover');
+          }
+        });
+      });
+      
+      star.addEventListener('mouseleave', function() {
+        stars.forEach(s => s.classList.remove('hover'));
+      });
+    });
+    
+    // Manejar clic en botones numéricos
+    numbers.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const rating = parseInt(this.getAttribute('data-rating'));
+        updateRatingDisplay(rating);
+      });
+    });
+  });
+</script>
+
+<!-- Incluir script de favoritos -->
+<script src="/js/favorites.js"></script>
+
+<style>
+  .review-star {
+    cursor: pointer;
+    font-size: 1.5rem;
+    color: #ccc;
+    margin-right: 5px;
+  }
+  
+  .review-star.active {
+    color: #ffc107;
+  }
+  
+  .review-star.hover {
+    color: #ffdb70;
+  }
+</style>

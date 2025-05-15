@@ -1,0 +1,108 @@
+<!-- Lista de películas favoritas -->
+<div class="container mt-4">
+  <h1 class="mb-4">Mis Películas Favoritas</h1>
+  
+  <div class="mb-4">
+    <a href="/movies" class="btn btn-primary">
+      <i class="fas fa-film"></i> Explorar Películas
+    </a>
+    <a href="/collections/mis-colecciones" class="btn btn-outline-primary">
+      <i class="fas fa-list"></i> Mis Colecciones
+    </a>
+  </div>
+  
+  <% if (favorites && favorites.length > 0) { %>
+    <div class="row">
+      <% favorites.forEach(favorite => { %>
+        <% const movie = favorite.movieId; %>
+        <div class="col-md-3 mb-4">
+          <div class="card h-100">
+            <img src="<%= movie.imagen %>" class="card-img-top" alt="<%= movie.titulo %>">
+            <div class="card-body">
+              <h5 class="card-title"><%= movie.titulo %></h5>
+              <p class="card-text">
+                <small class="text-muted"><%= movie.genero %> | <%= movie.anio %></small>
+              </p>
+              
+              <!-- Calificación promedio -->
+              <div class="mb-2">
+                <% for (let i = 1; i <= 5; i++) { %>
+                  <i class="fas fa-star <%= i <= movie.rating ? 'text-warning' : 'text-secondary' %>"></i>
+                <% } %>
+                <small class="text-muted ms-1"><%= movie.rating.toFixed(1) %></small>
+              </div>
+              
+              <p class="card-text">
+                <small class="text-muted">
+                  <i class="fas fa-clock"></i> Añadido el <%= new Date(favorite.createdAt).toLocaleDateString() %>
+                </small>
+              </p>
+            </div>
+            <div class="card-footer d-flex justify-content-between">
+              <a href="/movies/<%= movie._id %>" class="btn btn-primary btn-sm">
+                <i class="fas fa-info-circle"></i> Ver Detalles
+              </a>
+              <button class="btn btn-danger btn-sm remove-favorite" data-movie-id="<%= movie._id %>">
+                <i class="fas fa-heart-broken"></i> Quitar
+              </button>
+            </div>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+  <% } else { %>
+    <div class="alert alert-info">
+      <i class="fas fa-info-circle"></i> No tienes películas favoritas aun. Explora el catálogo y marca tus películas favoritas con el botón de corazón.
+    </div>
+  <% } %>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Manejar la eliminación de favoritos
+    const removeBtns = document.querySelectorAll('.remove-favorite');
+    
+    removeBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const movieId = this.getAttribute('data-movie-id');
+        const card = this.closest('.col-md-3');
+        
+        // Deshabilitar botón mientras se procesa
+        this.disabled = true;
+        
+        fetch('/favorites/toggle', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ movieId: movieId })
+        })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.action === 'removed') {
+              // Eliminar la tarjeta con una animación
+              card.style.opacity = '0';
+              setTimeout(() => {
+                card.remove();
+                
+                // Verificar si ya no hay favoritos
+                const remainingCards = document.querySelectorAll('.remove-favorite');
+                if (remainingCards.length === 0) {
+                  location.reload(); // Recargar para mostrar el mensaje de "no hay favoritos"
+                }
+              }, 300);
+            } else {
+              // Habilitar botón nuevamente si hay error
+              this.disabled = false;
+              alert('Error al quitar de favoritos');
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            this.disabled = false;
+            alert('Error de conexión');
+          });
+      });
+    });
+  });
+</script>

@@ -1,0 +1,47 @@
+<% /* No incluir header, ya lo maneja express-ejs-layouts */ %>
+
+<!-- Establecer el título de la página -->
+<% title = 'Recomendaciones' %>
+
+<h1 class="mb-4">Recomendaciones para ti</h1>
+
+<div class="alert alert-info mb-4">
+  <% if (type === 'personalized') { %>
+    Estas recomendaciones están basadas en tus géneros favoritos y calificaciones previas.
+  <% } else { %>
+    Estas son las películas mejor calificadas por nuestra comunidad. ¡Califica más películas para obtener recomendaciones personalizadas!
+  <% } %>
+</div>
+
+<div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4">
+  <% if (recommendations.length === 0) { %>
+    <div class="col-12">
+      <div class="alert alert-warning">
+        No hay recomendaciones disponibles en este momento. ¡Explora nuestro catálogo y califica algunas películas!
+      </div>
+    </div>
+  <% } else { %>
+    <% recommendations.forEach(movie => { %>
+      <div class="col">
+        <div class="card h-100 shadow-sm">
+          <img src="<%= movie.imagen || '/images/default-movie.jpg' %>" class="card-img-top" alt="<%= movie.titulo %>">
+          <div class="card-body">
+            <h5 class="card-title"><%= movie.titulo %> (<%= movie.año %>)</h5>
+            <p class="card-text text-muted"><%= movie.genero %></p>
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="rating">
+                <% for (let i = 1; i <= 5; i++) { %>
+                  <i class="fas fa-star <%= movie.rating >= i ? 'text-warning' : 'text-secondary' %>"></i>
+                <% } %>
+                <span class="ms-1"><%= movie.rating.toFixed(1) %></span>
+              </div>
+              <a href="/movies/<%= movie._id %>" class="btn btn-sm btn-primary">Ver detalles</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% }) %>
+  <% } %>
+</div>
+
+<% /* No incluir footer, ya lo maneja express-ejs-layouts */ %>

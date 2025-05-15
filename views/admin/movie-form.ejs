@@ -1,0 +1,80 @@
+<% /* No incluir header, ya lo maneja express-ejs-layouts */ %>
+
+<!-- Establecer el título de la página -->
+<% title = movie ? 'Editar Película' : 'Agregar Película' %>
+
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h4 class="mb-0"><%= movie ? 'Editar' : 'Agregar' %> Película</h4>
+        </div>
+        <div class="card-body">
+          <form action="<%= action %>" method="POST" enctype="multipart/form-data">
+            <div class="row mb-3">
+              <div class="col-md-8">
+                <!-- Título -->
+                <div class="mb-3">
+                  <label for="titulo" class="form-label">Título</label>
+                  <input type="text" class="form-control" id="titulo" name="titulo" value="<%= movie ? movie.titulo : '' %>" required>
+                </div>
+                
+                <!-- Género -->
+                <div class="mb-3">
+                  <label for="genero" class="form-label">Género</label>
+                  <select class="form-select" id="genero" name="genero" required>
+                    <option value="" disabled <%= !movie ? 'selected' : '' %>>Selecciona un género</option>
+                    <% const generos = ['Acción', 'Aventura', 'Animación', 'Comedia', 'Crimen', 'Documental', 'Drama', 'Fantasía', 'Horror', 'Musical', 'Misterio', 'Romance', 'Ciencia Ficción', 'Thriller', 'Guerra', 'Western'] %>
+                    <% generos.forEach(genero => { %>
+                      <option value="<%= genero %>" <%= movie && movie.genero === genero ? 'selected' : '' %>><%= genero %></option>
+                    <% }) %>
+                  </select>
+                </div>
+                
+                <!-- Año -->
+                <div class="mb-3">
+                  <label for="anio" class="form-label">Año</label>
+                  <input type="number" class="form-control" id="anio" name="anio" min="1900" max="<%= new Date().getFullYear() + 1 %>" value="<%= movie ? movie.anio : new Date().getFullYear() %>" required>
+                </div>
+              </div>
+              
+              <div class="col-md-4">
+                <!-- Imagen -->
+                <div class="mb-3">
+                  <label for="imagen" class="form-label">Imagen</label>
+                  <input type="file" class="form-control" id="imagen" name="imagen" accept="image/*">
+                  <div class="form-text">Formato: JPG, PNG. Máximo 5MB.</div>
+                </div>
+                
+                <% if (movie && movie.imagen) { %>
+                  <div class="text-center mt-3">
+                    <img src="<%= movie.imagen %>" alt="<%= movie.titulo %>" class="img-thumbnail" style="max-height: 200px;">
+                    <div class="form-text">Imagen actual</div>
+                  </div>
+                <% } %>
+              </div>
+            </div>
+            
+            <!-- Descripción -->
+            <div class="mb-4">
+              <label for="descripcion" class="form-label">Descripción</label>
+              <textarea class="form-control" id="descripcion" name="descripcion" rows="5" required><%= movie ? movie.descripcion : '' %></textarea>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+              <a href="/admin/movies" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i> Cancelar
+              </a>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i> <%= movie ? 'Actualizar' : 'Guardar' %> Película
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% /* No incluir footer, ya lo maneja express-ejs-layouts */ %>
