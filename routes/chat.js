@@ -3,6 +3,7 @@ const router = express.Router();
 const { isAuthenticated } = require('./auth');
 const mongoose = require('mongoose');
 const ChatMessage = require('../models/Chat');
+const ollamaService = require('../services/ollamaService');
 
 // API endpoint to save a chat message - with validation and logging
 router.post('/message', isAuthenticated, async (req, res) => {
@@ -24,29 +25,63 @@ router.post('/message', isAuthenticated, async (req, res) => {
     const userId = req.session.user._id;
     console.log('Usuario autenticado:', username);
 
-    // Generar respuesta del bot
-    const botResponse = getBotResponse(cleanedMessage);
-    console.log('Respuesta del bot generada:', botResponse);
+    // Intentar generar respuesta del bot usando Ollama
+    let botResponse;
+    try {
+      console.log('Iniciando proceso de generación de respuesta para:', cleanedMessage);
+      
+      // Intentar obtener respuesta de Ollama (el servicio ya maneja internamente las verificaciones)
+      botResponse = await ollamaService.generateResponse(cleanedMessage);
+      console.log('Respuesta recibida:', botResponse.substring(0, 50) + '...');
+      
+      // Verificar si la respuesta indica que el servicio no está disponible
+      if (botResponse.includes('servicio de IA no está disponible') || 
+          botResponse.includes('error al procesar tu solicitud') || 
+          botResponse.includes('modelo de IA no está disponible') || 
+          botResponse.includes('Lo siento, el servicio de IA no está disponible') || 
+          botResponse.includes('No se pudo generar una respuesta')) {
+        
+        console.log('Respuesta de Ollama indica indisponibilidad, usando respaldo');
+        botResponse = await getFallbackBotResponse(cleanedMessage);
+        console.log('Respuesta de respaldo generada:', botResponse.substring(0, 50) + '...');
+      }
+    } catch (error) {
+      console.error('Error al obtener respuesta de Ollama:', error.message);
+      if (error.stack) {
+        console.error('Stack trace:', error.stack);
+      }
+      
+      // Si Ollama falla, usar el sistema de respaldo
+      console.log('Usando sistema de respaldo debido a error en Ollama');
+      botResponse = await getFallbackBotResponse(cleanedMessage);
+      console.log('Respuesta del bot generada con sistema de respaldo:', botResponse.substring(0, 50) + '...');
+    }
 
     // Crear objetos de mensaje para usuario y bot
+    const timestamp = new Date();
     const userMessageObj = {
       username,
       userId,
       message: cleanedMessage,
-      timestamp: new Date(),
+      timestamp,
       isBot: false
     };
     
     const botMessageObj = {
       username: 'Asistente',
       message: botResponse,
-      timestamp: new Date(),
+      timestamp: new Date(timestamp.getTime() + 1000), // 1 segundo después para mantener orden
       isBot: true
     };
 
     // Guardar ambos mensajes en la base de datos
-    await ChatMessage.saveConversation(userMessageObj, botMessageObj);
-    console.log('Mensajes guardados en la base de datos');
+    try {
+      await ChatMessage.saveConversation(userMessageObj, botMessageObj);
+      console.log('Mensajes guardados en la base de datos');
+    } catch (dbError) {
+      console.error('Error al guardar mensajes en la base de datos:', dbError.message);
+      // Continuamos aunque falle la base de datos
+    }
 
     // Devolver una respuesta exitosa con el mensaje del usuario y del bot
     return res.json({
@@ -108,23 +143,17 @@ router.get('/history', isAuthenticated, async (req, res) => {
   }
 });
 
-// Función para obtener respuesta del bot (con lógica mejorada para coincidencias parciales)
-function getBotResponse(message) {
+// Función de respaldo en caso de que Ollama no esté disponible
+async function getFallbackBotResponse(message) {
   const movieKnowledge = {
     // Preguntas generales
     'hola': 'Hola, soy el asistente de películas. ¿En qué puedo ayudarte?',
-    'hi': 'Hola, soy el asistente de películas. ¿En qué puedo ayudarte?',
-    'hey': 'Hola, soy el asistente de películas. ¿En qué puedo ayudarte?',
-    'buenos dias': 'Buenos días, ¿en qué puedo ayudarte con películas hoy?',
-    'buenas tardes': 'Buenas tardes, ¿en qué puedo ayudarte con películas hoy?',
-    'buenas noches': 'Buenas noches, ¿en qué puedo ayudarte con películas hoy?',
     'quien eres': 'Soy el asistente virtual de películas, estoy aquí para responder tus preguntas sobre películas y recomendarte títulos.',
-    'ayuda': 'Puedes preguntarme sobre géneros de películas, directores famosos, o pedirme recomendaciones. ¡Estoy aquí para ayudarte!',
     
     // Géneros de películas
-    'accion': 'Algunas películas de acción populares son "Duro de Matar", "Mad Max: Fury Road", "John Wick" y "Misión Imposible".',
-    'comedia': 'Algunas comedias recomendadas son "Superbad", "Anchorman", "Bridesmaids" y "La resaca".',
-    'drama': 'Algunos dramas aclamados son "El Padrino", "Cadena Perpetua", "Forrest Gump" y "El club de la pelea".',
+    'accion': 'Algunas películas de acción populares son "Die Hard", "Mad Max: Fury Road", "John Wick" y "Misión Imposible".',
+    'comedia': 'Algunas comedias recomendadas son "Superbad", "Bridesmaids", "The Hangover" y "Deadpool".',
+    'drama': 'Algunos dramas aclamados son "El Padrino", "Cadena Perpetua", "El club de la pelea" y "Forrest Gump".',
     'terror': 'Algunas películas de terror populares son "El Resplandor", "El Exorcista", "Hereditary" y "Get Out".',
     'ciencia ficcion': 'Algunas películas de ciencia ficción recomendadas son "Blade Runner", "Interestelar", "Matrix" y "La llegada".',
     'romance': 'Algunas películas románticas populares son "Titanic", "Diario de una pasión", "Antes del amanecer" y "La La Land".',

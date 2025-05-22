@@ -3,15 +3,18 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('Inicializando chat flotante con respuestas a preguntas básicas');
+  console.log('Inicializando chat flotante moderno con respuestas a preguntas básicas');
   
   // Elementos para el chat flotante
   const chatContainer = document.getElementById('chat-container');
   const chatFloatBtn = document.getElementById('chat-float-btn');
   const chatCloseBtn = document.getElementById('chat-close-btn');
+  const chatThemeBtn = document.getElementById('chat-theme-btn');
   const chatForm = document.getElementById('chat-form');
   const messageInput = document.getElementById('message-input');
   const chatMessages = document.getElementById('chat-messages');
+  const chatBody = document.getElementById('chat-body');
+  const typingStatus = document.getElementById('typing-status');
   
   // Base de conocimiento para respuestas básicas sobre películas
   const movieKnowledge = {
@@ -53,13 +56,37 @@ document.addEventListener('DOMContentLoaded', function() {
     return;
   }
   
+  // Verificar que todos los elementos opcionales existan
+  if (!chatThemeBtn) {
+    console.log('Botón de tema no encontrado, se usará el tema por defecto');
+  }
+  
+  if (!typingStatus) {
+    console.log('Elemento de estado de escritura no encontrado');
+  }
+  
   console.log('Elementos del chat encontrados');
   
+  // Variables para el tema
+  let darkMode = localStorage.getItem('chatDarkMode') === 'true';
+  
+  // Aplicar tema inicial
+  if (darkMode && chatThemeBtn) {
+    document.body.classList.add('dark-theme');
+    chatContainer.classList.add('dark-theme');
+    chatThemeBtn.querySelector('i').classList.remove('fa-moon');
+    chatThemeBtn.querySelector('i').classList.add('fa-sun');
+  }
+  
   // Manejar apertura del chat - con prevención de eventos predeterminados
-  chatFloatBtn.addEventListener('click', function(e) {
+  console.log('Añadiendo event listener al botón flotante');
+  
+  chatFloatBtn.onclick = function(e) {
     // Prevenir comportamiento predeterminado
-    e.preventDefault();
-    e.stopPropagation();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     
     console.log('Botón de chat clickeado');
     
@@ -70,29 +97,104 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => messageInput.focus(), 100);
     
     return false;
+  };
+  
+  // Añadir también un event listener tradicional como respaldo
+  chatFloatBtn.addEventListener('click', function(e) {
+    console.log('Event listener tradicional activado');
+    chatFloatBtn.onclick(e);
   });
   
   // Manejar cierre del chat - con prevención de eventos predeterminados
   if (chatCloseBtn) {
-    chatCloseBtn.addEventListener('click', function(e) {
-      // Prevenir comportamiento predeterminado
-      e.preventDefault();
-      e.stopPropagation();
-      
-      console.log('Cerrando chat');
+    chatCloseBtn.addEventListener('click', function() {
       chatContainer.classList.remove('show');
-      
-      return false;
+      // Efecto de desvanecimiento
+      chatContainer.style.opacity = '0';
+      setTimeout(() => {
+        chatContainer.style.opacity = '';
+      }, 300);
     });
   }
   
-  // Añadir manejador para tecla ESC para cerrar el chat
+  // Cerrar el chat al presionar Escape
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && chatContainer.classList.contains('show')) {
       chatContainer.classList.remove('show');
+      // Efecto de desvanecimiento
+      chatContainer.style.opacity = '0';
+      setTimeout(() => {
+        chatContainer.style.opacity = '';
+      }, 300);
     }
   });
-
+  
+  // Manejar cambio de tema (solo si existe el botón)
+  if (chatThemeBtn) {
+    chatThemeBtn.addEventListener('click', function() {
+      darkMode = !darkMode;
+      
+      if (darkMode) {
+        document.body.classList.add('dark-theme');
+        chatContainer.classList.add('dark-theme');
+        chatThemeBtn.querySelector('i').classList.remove('fa-moon');
+        chatThemeBtn.querySelector('i').classList.add('fa-sun');
+      } else {
+        document.body.classList.remove('dark-theme');
+        chatContainer.classList.remove('dark-theme');
+        chatThemeBtn.querySelector('i').classList.remove('fa-sun');
+        chatThemeBtn.querySelector('i').classList.add('fa-moon');
+      }
+      
+      // Guardar preferencia en localStorage
+      localStorage.setItem('chatDarkMode', darkMode);
+    });
+  }
+  
+  // Obtener el botón de desplazamiento al final
+  const scrollToBottomBtn = document.getElementById('scroll-to-bottom-btn');
+  let isNearBottom = true;
+  
+  // Configurar observador de mutaciones para detectar nuevos mensajes y hacer scroll automáticamente
+  if (chatMessages) {
+    // Detectar cuando el usuario se desplaza en el chat
+    chatMessages.addEventListener('scroll', () => {
+      // Calcular si estamos cerca del final
+      const scrollPosition = chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight;
+      isNearBottom = scrollPosition < 100;
+      
+      // Mostrar u ocultar el botón según la posición del scroll
+      if (!isNearBottom && scrollToBottomBtn) {
+        scrollToBottomBtn.classList.add('visible');
+      } else if (scrollToBottomBtn) {
+        scrollToBottomBtn.classList.remove('visible');
+      }
+    });
+    
+    // Manejar clic en el botón de desplazamiento al final
+    if (scrollToBottomBtn) {
+      scrollToBottomBtn.addEventListener('click', () => {
+        scrollToBottom();
+        scrollToBottomBtn.classList.remove('visible');
+      });
+    }
+    
+    const messagesObserver = new MutationObserver((mutations) => {
+      // Si se añaden nodos y estamos cerca del final, hacer scroll al fondo
+      if (mutations.some(mutation => mutation.addedNodes.length > 0)) {
+        if (isNearBottom) {
+          scrollToBottom();
+        } else if (scrollToBottomBtn) {
+          // Si no estamos cerca del final, mostrar el botón
+          scrollToBottomBtn.classList.add('visible');
+        }
+      }
+    });
+    
+    // Observar cambios en el contenedor de mensajes
+    messagesObserver.observe(chatMessages, { childList: true, subtree: true });
+  }
+  
   // Añadir mensaje inicial al chat
   // Limpiar mensajes existentes
   chatMessages.innerHTML = '';
@@ -106,6 +208,9 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   `;
   chatMessages.appendChild(welcomeMessage);
+  
+  // Hacer scroll inicial
+  scrollToBottom();
   
   // Función para agregar mensaje del usuario al chat
   function addUserMessage(message, timestamp = new Date(), animate = true) {
@@ -197,9 +302,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  // Función para hacer scroll al fondo del chat
+  // Función mejorada para hacer scroll al fondo del chat
   function scrollToBottom() {
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    if (chatMessages) {
+      // Usar requestAnimationFrame para asegurar que el scroll ocurra después de que el DOM se actualice
+      requestAnimationFrame(() => {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        // Doble verificación para asegurar que el scroll funcione correctamente
+        setTimeout(() => {
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        }, 100);
+      });
+    }
   }
   
   // Función para obtener respuesta a una pregunta

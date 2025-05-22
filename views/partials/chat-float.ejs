@@ -1,34 +1,44 @@
-<!-- Chat flotante -->
+<!-- Chat flotante moderno -->
 <div class="chat-container" id="chat-container">
   <div class="chat-header">
-    <h5><i class="fas fa-film me-2"></i> Chat de Películas</h5>
-    <button type="button" class="btn-close" id="chat-close-btn"></button>
-  </div>
-  
-  <div class="chat-body">
-    <div class="chat-messages" id="chat-messages">
-      <!-- Los mensajes se cargarán dinámicamente -->
-      <div class="system-message my-2">
-        <div class="alert alert-info py-1 px-3">
-          Bienvenido al chat. ¡Haz preguntas sobre películas!
-        </div>
-      </div>
+    <h5><i class="fas fa-film"></i> Chat de Películas</h5>
+    <div class="header-controls">
+      <button type="button" class="btn-theme" id="chat-theme-btn" title="Cambiar tema">
+        <i class="fas fa-moon"></i>
+      </button>
+      <button type="button" class="btn-close" id="chat-close-btn" title="Cerrar chat"></button>
     </div>
   </div>
   
-  <div class="chat-users">
-    <h6 class="mb-2">Usuarios conectados</h6>
-    <ul class="list-group list-group-flush" id="users-list">
-      <!-- Los usuarios se cargarán dinámicamente -->
-    </ul>
+  <div class="chat-body flex-grow-1" id="chat-body">
+    <div class="chat-messages" id="chat-messages">
+      <!-- Los mensajes se cargarán dinámicamente -->
+      <div class="system-message my-3">
+        <div class="alert alert-info">
+          <i class="fas fa-robot me-2"></i> Bienvenido al chat de películas. ¡Pregúntame sobre cualquier película, director o género!
+        </div>
+      </div>
+    </div>
+    <!-- Botón para desplazarse al final del chat -->
+    <button id="scroll-to-bottom-btn" class="scroll-to-bottom-btn" title="Ir al final">
+      <i class="fas fa-arrow-down"></i>
+    </button>
   </div>
+  
+  <!-- Se eliminó la sección de usuarios conectados -->
   
   <div class="chat-footer">
     <form id="chat-form" class="d-flex">
-      <input type="text" id="message-input" class="form-control me-2" placeholder="Escribe un mensaje..." autocomplete="off">
-      <button type="submit" class="btn btn-primary">
+      <input type="text" id="message-input" class="form-control" placeholder="Pregunta sobre películas..." autocomplete="off">
+      <button type="submit" class="btn btn-primary" title="Enviar mensaje">
         <i class="fas fa-paper-plane"></i>
       </button>
     </form>
+    <div class="typing-status" id="typing-status"></div>
   </div>
 </div>
+
+<!-- Botón flotante para abrir el chat con indicador de notificación -->
+<button class="chat-float-btn" id="chat-float-btn" title="Abrir chat de películas">
+  <i class="fas fa-comments"></i>
+</button>

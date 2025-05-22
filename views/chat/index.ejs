@@ -10,47 +10,70 @@
     max-width: 80%;
     margin: 0 auto;
   }
-  
+
   #messages-container {
     background-color: #f8f9fa;
     height: 300px;
     overflow-y: auto;
   }
-  
+
   .message-header {
     font-size: 0.85rem;
   }
+
+  /* Responsive */
+  @media (max-width: 576px) {
+    .chat-container {
+      width: 100%;
+      height: 100%;
+      border-radius: 0;
+    }
+
+    .chat-header h5 {
+      font-size: 1rem;
+    }
+
+    .users-sidebar {
+      max-height: 60px;
+      overflow-y: auto;
+      font-size: 0.85rem;
+    }
+  }
+
 </style>
 
 <!-- Ventana flotante del chat -->
 <div class="chat-container" id="chat-container">
   <!-- Hidden input with current username -->
-  <input type="hidden" id="current-username" value="<%= user.username %>">
-  
+  <input type="hidden" id="current-username" value="<%= user?.username || 'Invitado' %>">
+
   <!-- Cabecera del chat -->
   <div class="chat-header">
     <div class="d-flex align-items-center">
       <h5 class="mb-0"><i class="fas fa-film me-2"></i> Chat de Películas</h5>
-      <div class="ms-auto badge bg-primary">
-        <i class="fas fa-users me-1"></i> <span id="user-count">0</span> en línea
+      <div class="ms-auto d-flex align-items-center gap-2">
+        <span id="connection-status" class="badge bg-success">Conectado</span>
+        <div class="badge bg-primary">
+          <i class="fas fa-users me-1"></i> <span id="user-count">0</span> en línea
+        </div>
       </div>
     </div>
     <span class="chat-close" id="chat-close"><i class="fas fa-times"></i></span>
   </div>
-  
+
   <!-- Contenido del chat -->
-  <div class="chat-body d-flex flex-column" style="flex: 1; overflow: hidden;">
-    <!-- Lista de usuarios -->
-    <div class="users-sidebar p-2 border-bottom" style="height: 100px; overflow-y: auto;">
-      <h6 class="mb-2 small">Usuarios en línea:</h6>
-      <div id="users-list" class="d-flex flex-wrap gap-1">
-        <!-- Users will be added dynamically -->
-      </div>
+<div class="chat-body d-flex flex-column flex-grow-1 overflow-hidden">
+  <!-- Lista de usuarios compacta -->
+  <div class="users-sidebar px-2 py-1 border-bottom small text-muted" style="max-height: 60px; overflow-y: auto;">
+    <div><strong>En línea:</strong></div>
+    <div id="users-list" class="d-flex flex-wrap gap-1 mt-1">
+      <!-- Users will be added dynamically -->
     </div>
-    
+  </div>
+
     <!-- Mensajes -->
     <div id="messages-container" class="p-3 flex-grow-1">
-      <div id="messages" class="d-flex flex-column">
+      <div id="messages" class="d-flex flex-column" aria-live="polite">
         <!-- Welcome message -->
         <div class="system-message text-center mb-3">
           <div class="alert alert-info d-inline-block">
@@ -60,7 +83,7 @@
         <!-- Messages will be added dynamically -->
       </div>
     </div>
-    
+
     <!-- Input de mensaje -->
     <div class="chat-footer p-2 border-top">
       <form id="message-form" class="d-flex">
@@ -79,5 +102,58 @@
 
 <!-- Chat script -->
 <script src="/js/chat.js"></script>
+
+<script>
+  const socket = io();
+
+  // Indicador de conexión
+  socket.on('connect', () => {
+    const status = document.getElementById('connection-status');
+    status.classList.replace('bg-danger', 'bg-success');
+    status.textContent = 'Conectado';
+  });
+
+  socket.on('disconnect', () => {
+    const status = document.getElementById('connection-status');
+    status.classList.replace('bg-success', 'bg-danger');
+    status.textContent = 'Desconectado';
+  });
+
+  // Auto-scroll al recibir mensajes
+  function scrollToBottom() {
+    const container = document.getElementById('messages-container');
+    container.scrollTop = container.scrollHeight;
+  }
+
+  // Prevent double submit
+  document.getElementById('message-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const input = document.getElementById('message-input');
+    const btn = this.querySelector('button');
+    if (!input.value.trim()) return;
+
+    // Emit message
+    socket.emit('chatMessage', input.value.trim());
+
+    // Disable button momentáneamente
+    btn.disabled = true;
+    setTimeout(() => {
+      btn.disabled = false;
+    }, 500);
+
+    input.value = '';
+    input.focus();
+  });
+
+  // Ejemplo: cuando se recibe un mensaje
+  socket.on('message', (data) => {
+    const messages = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'mb-2';
+    div.innerHTML = `<strong>${data.username}:</strong> ${data.message}`;
+    messages.appendChild(div);
+    scrollToBottom();
+  });
+</script>
 
 <% /* No incluir footer, ya lo maneja express-ejs-layouts */ %>
