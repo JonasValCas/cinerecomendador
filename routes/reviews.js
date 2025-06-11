@@ -8,12 +8,13 @@ const Movie = require('../models/Movie');
 const { ensureAuthenticated, isAdmin } = require('../middleware/auth');
 
 // Obtener todas las reseñas de una película
-router.get('/movie/:movieId', async (req, res) => {
+router.get('/movie/:movieId', async (req, res, next) => { // Added next
   try {
     const movie = await Movie.findById(req.params.movieId);
     if (!movie) {
-      req.flash('error', 'Película no encontrada');
-      return res.redirect('/');
+      const error = new Error('Película no encontrada.');
+      error.status = 404;
+      return next(error);
     }
     
     const reviews = await Review.find({ movieId: req.params.movieId })
@@ -27,19 +28,18 @@ router.get('/movie/:movieId', async (req, res) => {
       user: req.user
     });
   } catch (err) {
-    console.error(err);
-    req.flash('error', 'Error al cargar las reseñas');
-    res.redirect('/');
+    next(err);
   }
 });
 
 // Formulario para crear/editar reseña
-router.get('/movie/:movieId/nueva', ensureAuthenticated, async (req, res) => {
+router.get('/movie/:movieId/nueva', ensureAuthenticated, async (req, res, next) => { // Added next
   try {
     const movie = await Movie.findById(req.params.movieId);
     if (!movie) {
-      req.flash('error', 'Película no encontrada');
-      return res.redirect('/');
+      const error = new Error('Película no encontrada.');
+      error.status = 404;
+      return next(error);
     }
     
     // Verificar si el usuario ya tiene una reseña para esta película
@@ -62,29 +62,31 @@ router.get('/movie/:movieId/nueva', ensureAuthenticated, async (req, res) => {
       user: req.user
     });
   } catch (err) {
-    console.error(err);
-    req.flash('error', 'Error al cargar el formulario');
-    res.redirect(`/movies/${req.params.movieId}`);
+    next(err);
   }
 });
 
 // Crear/actualizar reseña
-router.post('/movie/:movieId', ensureAuthenticated, async (req, res) => {
+router.post('/movie/:movieId', ensureAuthenticated, async (req, res, next) => { // Added next
   try {
     const { titulo, contenido, rating } = req.body;
     const movieId = req.params.movieId;
     
-    // Verificar que el usuario esté autenticado y tenga un ID válido
+    // ensureAuthenticated should handle this, but as a safeguard:
     if (!req.user || !req.user.id) {
-      console.error('Error: Usuario no autenticado o ID de usuario no disponible');
-      req.flash('error', 'Debes iniciar sesión para publicar una reseña');
-      return res.redirect('/auth/login');
+      const error = new Error('Debes iniciar sesión para publicar una reseña.');
+      error.status = 401; // Unauthorized
+      return next(error);
     }
     
     // Validar que se hayan proporcionado los campos requeridos
-    if (!titulo || !contenido) {
-      req.flash('error', 'El título y contenido son obligatorios');
-      return res.redirect(`/reviews/movie/${movieId}/nueva`);
+    if (!titulo || !titulo.trim() || !contenido || !contenido.trim()) {
+      const error = new Error('El título y contenido son obligatorios.');
+      error.status = 400; // Bad Request
+      // For form submissions, you might want to re-render the form with the error
+      // req.flash('error', error.message); // Flash can still be used with redirects
+      // return res.redirect(`/reviews/movie/${movieId}/nueva`);
+      return next(error); // Or handle by re-rendering form if not an API
     }
     
     // Verificar si el usuario ya tiene una reseña para esta película
@@ -117,7 +119,7 @@ router.post('/movie/:movieId', ensureAuthenticated, async (req, res) => {
       // Actualizar reseña existente
       review.titulo = titulo;
       review.contenido = contenido;
-      review.updatedAt = Date.now();
+      review.updatedAt = Date.now(); // This is automatically handled by timestamps: true in schema
       if (ratingDoc) {
         review.ratingId = ratingDoc._id;
       }
@@ -131,34 +133,36 @@ router.post('/movie/:movieId', ensureAuthenticated, async (req, res) => {
         ratingId: ratingDoc ? ratingDoc._id : null
       });
       
-      // Verificación adicional antes de guardar
+      // Verificación adicional antes de guardar (though ensureAuthenticated should cover userId)
       if (!review.userId) {
-        console.error('Error: userId no definido en el objeto review');
-        req.flash('error', 'Error al crear la reseña: ID de usuario no disponible');
-        return res.redirect(`/reviews/movie/${movieId}/nueva`);
+        const error = new Error('Error al crear la reseña: ID de usuario no disponible.');
+        error.status = 500; // Internal server error or configuration issue
+        return next(error);
       }
     }
     
     await review.save();
     
-    req.flash('success', review.updatedAt ? 'Reseña actualizada con éxito' : 'Reseña publicada con éxito');
+    // Use a more specific field to check if it was an update or create for the flash message
+    const actionMessage = review.createdAt.getTime() === review.updatedAt.getTime() ? 'Reseña publicada con éxito' : 'Reseña actualizada con éxito';
+    req.flash('success', actionMessage);
     res.redirect(`/movies/${movieId}`);
   } catch (err) {
-    console.error(err);
-    req.flash('error', 'Error al guardar la reseña');
-    res.redirect(`/reviews/movie/${req.params.movieId}/nueva`);
+    next(err);
   }
 });
 
 // Votar por la utilidad de una reseña (API)
-router.post('/:reviewId/vote', ensureAuthenticated, async (req, res) => {
+router.post('/:reviewId/vote', ensureAuthenticated, async (req, res, next) => { // Added next
   try {
     const { util } = req.body;
     const reviewId = req.params.reviewId;
     
     const review = await Review.findById(reviewId);
     if (!review) {
-      return res.status(404).json({ success: false, error: 'Reseña no encontrada' });
+      const error = new Error('Reseña no encontrada.');
+      error.status = 404;
+      return next(error);
     }
     
     // Verificar si el usuario ya votó esta reseña
@@ -232,37 +236,36 @@ router.post('/:reviewId/vote', ensureAuthenticated, async (req, res) => {
       });
     }
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ success: false, error: 'Error al procesar el voto' });
+    next(err);
   }
 });
 
 // Eliminar reseña
-router.post('/:reviewId/eliminar', ensureAuthenticated, async (req, res) => {
+router.post('/:reviewId/eliminar', ensureAuthenticated, async (req, res, next) => { // Added next
   try {
     const review = await Review.findById(req.params.reviewId);
     
     if (!review) {
-      req.flash('error', 'Reseña no encontrada');
-      return res.redirect('back');
+      const error = new Error('Reseña no encontrada.');
+      error.status = 404;
+      return next(error); // Consider redirecting back if preferred for non-API
     }
     
-    // Verificar si el usuario es el autor de la reseña
-    if (!req.user.id.equals(review.userId)) {
-      req.flash('error', 'No tienes permiso para eliminar esta reseña');
-      return res.redirect('back');
+    // Verificar si el usuario es el autor de la reseña o es admin
+    if (!req.user.id.equals(review.userId.toString()) && !req.user.isAdmin) {
+      const error = new Error('No tienes permiso para eliminar esta reseña.');
+      error.status = 403; // Forbidden
+      return next(error); // Consider redirecting back
     }
     
-    const movieId = review.movieId;
+    const movieId = review.movieId; // Save before deleting review
     
     await Review.findByIdAndDelete(req.params.reviewId);
     
     req.flash('success', 'Reseña eliminada con éxito');
-    res.redirect(`/movies/${movieId}`);
+    res.redirect(`/movies/${movieId.toString()}`); // Ensure movieId is a string for URL
   } catch (err) {
-    console.error(err);
-    req.flash('error', 'Error al eliminar la reseña');
-    res.redirect('back');
+    next(err);
   }
 });
 
