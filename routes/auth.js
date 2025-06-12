@@ -68,7 +68,7 @@ router.post('/login', validateLogin, async (req, res) => {
   }
 });
 
-// Register process with validation
+// Register process with validation - STEP 1
 router.post('/register', validateRegister, async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -92,17 +92,61 @@ router.post('/register', validateRegister, async (req, res) => {
       });
     }
 
-    // Create new user
+    // Hash password and store data in session
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({
+    req.session.registrationData = {
       username,
       email,
       password: hashedPassword,
       isAdmin: await User.countDocuments() === 0 // First user is admin
+    };
+    
+    // Redirect to simulated payment page
+    res.redirect('/auth/subscribe');
+
+  } catch (error) {
+    console.error('Error en registro (paso 1):', error);
+    res.render('auth/register', { 
+      error: 'Error al procesar el registro',
+      username: req.body.username,
+      email: req.body.email
+    });
+  }
+});
+
+// Show subscription page - STEP 2
+router.get('/subscribe', (req, res) => {
+  if (!req.session.registrationData) {
+    // If there's no registration data, redirect back to the start
+    return res.redirect('/auth/register');
+  }
+  res.render('auth/subscribe');
+});
+
+// Complete registration after simulated payment - STEP 3
+router.post('/complete-registration', async (req, res) => {
+  try {
+    if (!req.session.registrationData) {
+      return res.redirect('/auth/register');
+    }
+
+    const { username, email, password, isAdmin } = req.session.registrationData;
+
+    // Create new user
+    const user = new User({
+      username,
+      email,
+      password, // Password is already hashed
+      isAdmin,
+      subscriptionStatus: 'active' // Set subscription to active
     });
     
     await user.save();
     
+    // Clean up session
+    delete req.session.registrationData;
+
+    // Log the user in
     req.session.user = {
       id: user._id,
       username: user.username,
@@ -111,12 +155,15 @@ router.post('/register', validateRegister, async (req, res) => {
     };
     
     res.redirect('/');
+
   } catch (error) {
-    console.error('Error en registro:', error);
+    console.error('Error al completar el registro:', error);
+    // Clean up session data on error to prevent being stuck
+    if (req.session) {
+      delete req.session.registrationData;
+    }
     res.render('auth/register', { 
-      error: 'Error al registrar usuario',
-      username: req.body.username,
-      email: req.body.email
+      error: 'Error al crear la cuenta. Por favor, intenta registrarte de nuevo.'
     });
   }
 });

@@ -39,10 +39,7 @@
                 </select>
               </div>
               
-              <!-- Campo para nueva colección (inicialmente oculto) -->
-              <div id="nueva-coleccion-container" class="mb-2 d-none">
-                <input type="text" class="form-control form-control-sm" name="nuevaColeccion" placeholder="Nombre de la nueva colección">
-              </div>
+
               
               <button type="submit" id="add-to-collection-btn" class="btn btn-sm btn-primary w-100">
                 <i class="fas fa-plus"></i> Añadir
@@ -53,21 +50,22 @@
       </div>
       
       <script>
-        // Mostrar/ocultar campo de nueva colección
+        // Redirigir a la página de creación de colección si se selecciona la opción
         document.addEventListener('DOMContentLoaded', function() {
+          const form = document.querySelector('form[action="/collections/agregar-pelicula"]');
           const collectionSelector = document.getElementById('collection-selector');
-          const nuevaColeccionContainer = document.getElementById('nueva-coleccion-container');
-          const nuevaColeccionInput = nuevaColeccionContainer.querySelector('input');
-          
-          collectionSelector.addEventListener('change', function() {
-            if (this.value === 'nueva') {
-              nuevaColeccionContainer.classList.remove('d-none');
-              nuevaColeccionInput.required = true;
-            } else {
-              nuevaColeccionContainer.classList.add('d-none');
-              nuevaColeccionInput.required = false;
-            }
-          });
+
+          if (form && collectionSelector) {
+            form.addEventListener('submit', function(event) {
+              if (collectionSelector.value === 'nueva') {
+                event.preventDefault(); // Prevenir el envío del formulario
+                const movieIdInput = form.querySelector('input[name="movieId"]');
+                const movieId = movieIdInput.value;
+                window.location.href = `/collections/nueva?pelicula_id=${movieId}`;
+              }
+              // Si se selecciona una colección existente, el formulario se envía normalmente.
+            });
+          }
         });
       </script>
     <% } %>
@@ -173,7 +171,7 @@
                 <h5 class="mb-0"><%= review.titulo %></h5>
                 <div>
                   <% for (let i = 1; i <= 5; i++) { %>
-                    <i class="fas fa-star <%= i <= review.rating ? 'text-warning' : 'text-secondary' %>"></i>
+                    <i class="fas fa-star <%= review.ratingId && i <= review.ratingId.rating ? 'text-warning' : 'text-secondary' %>"></i>
                   <% } %>
                 </div>
               </div>
@@ -181,7 +179,7 @@
                 <p class="card-text"><%= review.contenido.length > 150 ? review.contenido.substring(0, 150) + '...' : review.contenido %></p>
               </div>
               <div class="card-footer text-muted">
-                <small>Por <%= review.userId.username %> | <%= new Date(review.createdAt).toLocaleDateString() %></small>
+                                <small>Por <%= review.userId ? review.userId.username : 'Usuario anónimo' %> | <%= new Date(review.createdAt).toLocaleDateString() %></small>
                 <div class="mt-1">
                   <span class="badge bg-success"><i class="fas fa-thumbs-up"></i> <%= review.votosUtiles %></span>
                 </div>

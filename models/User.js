@@ -26,6 +26,11 @@ const userSchema = new mongoose.Schema({
   isAdmin: {
     type: Boolean,
     default: false
+  },
+  subscriptionStatus: {
+    type: String,
+    enum: ['active', 'inactive', 'cancelled'],
+    default: 'inactive'
   }
 }, {
   timestamps: true // Mongoose automáticamente maneja createdAt y updatedAt

@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Movie = require('../models/Movie');
 const Rating = require('../models/Rating');
 const Review = require('../models/Review');
@@ -46,6 +47,11 @@ router.get('/', async (req, res) => {
 
 // Get movie details
 router.get('/:id', async (req, res) => {
+  // Validate ObjectId
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(404).render('error', { message: 'Película no encontrada' });
+  }
+
   try {
     const movie = await Movie.findById(req.params.id);
     if (!movie) {
@@ -79,6 +85,7 @@ router.get('/:id', async (req, res) => {
     // Get featured reviews (top 2 by votes)
     const featuredReviews = await Review.find({ movieId: movie._id })
       .populate('userId', 'username')
+      .populate({ path: 'ratingId', select: 'rating' })
       .sort({ votosUtiles: -1 })
       .limit(2);
     

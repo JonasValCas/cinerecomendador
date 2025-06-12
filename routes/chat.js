@@ -3,6 +3,7 @@ const router = express.Router();
 const { isAuthenticated } = require('./auth');
 const mongoose = require('mongoose');
 const ChatMessage = require('../models/Chat');
+const Movie = require('../models/Movie');
 const ollamaService = require('../services/ollamaService');
 
 // API endpoint to save a chat message - with validation and logging
@@ -25,13 +26,29 @@ router.post('/message', isAuthenticated, async (req, res) => {
     const userId = req.session.user._id;
     console.log('Usuario autenticado:', username);
 
-    // Intentar generar respuesta del bot usando Ollama
-    let botResponse;
+    // 1. Intentar obtener una recomendación directa desde la base de datos
+    let botResponse = await getMovieRecommendation(cleanedMessage);
+
+    // 2. Si no hay recomendación de la BD, usar el servicio de IA (Ollama)
+    if (!botResponse) {
     try {
       console.log('Iniciando proceso de generación de respuesta para:', cleanedMessage);
       
-      // Intentar obtener respuesta de Ollama (el servicio ya maneja internamente las verificaciones)
-      botResponse = await ollamaService.generateResponse(cleanedMessage);
+      // Construir un contexto con el historial de chat
+      const history = await ChatMessage.find({ userId }).sort({ timestamp: 1 }).limit(10);
+      
+      const context = history.map(msg => ({
+        role: msg.isBot ? 'assistant' : 'user',
+        content: msg.message
+      }));
+
+      // Añadir el mensaje actual del usuario al contexto
+      context.push({ role: 'user', content: cleanedMessage });
+
+      console.log('Enviando a Ollama con contexto:', JSON.stringify(context, null, 2));
+
+      // Intentar obtener respuesta de Ollama con el contexto completo
+      botResponse = await ollamaService.generateResponse(context);
       console.log('Respuesta recibida:', botResponse.substring(0, 50) + '...');
       
       // Verificar si la respuesta indica que el servicio no está disponible
@@ -55,6 +72,7 @@ router.post('/message', isAuthenticated, async (req, res) => {
       console.log('Usando sistema de respaldo debido a error en Ollama');
       botResponse = await getFallbackBotResponse(cleanedMessage);
       console.log('Respuesta del bot generada con sistema de respaldo:', botResponse.substring(0, 50) + '...');
+    }
     }
 
     // Crear objetos de mensaje para usuario y bot
@@ -142,6 +160,71 @@ router.get('/history', isAuthenticated, async (req, res) => {
     res.status(500).json({ success: false, error: 'Error al obtener historial de chat' });
   }
 });
+
+// Función para obtener recomendaciones de la base de datos
+async function getMovieRecommendation(message) {
+  const lowerCaseMessage = message.toLowerCase();
+  
+  const wantsRecommendation = 
+    lowerCaseMessage.includes('recomienda') ||
+    lowerCaseMessage.includes('sugiere') ||
+    lowerCaseMessage.includes('dame una película') ||
+    lowerCaseMessage.includes('película de');
+
+  if (!wantsRecommendation) {
+    return null; // No es una solicitud de recomendación
+  }
+
+  // Extraer género si se especifica
+  const genreRegex = /de (\w+)/;
+  const genreMatch = lowerCaseMessage.match(genreRegex);
+  let query = {};
+  let genre = null;
+
+  if (genreMatch && genreMatch[1]) {
+    const extractedGenre = genreMatch[1].trim();
+    // Mapeo simple de géneros para que coincida con la base de datos
+    const genreMap = {
+      'accion': 'Acción',
+      'comedia': 'Comedia',
+      'drama': 'Drama',
+      'terror': 'Terror',
+      'ciencia ficcion': 'Ciencia Ficción',
+      'romance': 'Romance',
+      'aventura': 'Aventura',
+      'fantasia': 'Fantasía',
+      'misterio': 'Misterio',
+      'suspenso': 'Suspenso',
+    };
+    genre = genreMap[extractedGenre];
+    if (genre) {
+      query.genero = genre;
+    }
+  }
+
+  try {
+    console.log(`Buscando recomendaciones en la BD con query:`, query);
+    const movies = await Movie.find(query).sort({ rating: -1 }).limit(3);
+
+    if (movies.length > 0) {
+      const movieTitles = movies.map(m => m.titulo).join(', ');
+      if (genre) {
+        return `¡Claro! Te recomiendo estas películas de ${genre} de nuestra base de datos: ${movieTitles}.`;
+      } else {
+        return `Por supuesto, aquí tienes algunas recomendaciones de nuestra base de datos: ${movieTitles}.`;
+      }
+    } else {
+      if (genre) {
+        return `Lo siento, no encontré películas del género '${genre}' en nuestra base de datos. Puedes probar con otro género.`;
+      }
+      // Si no se especifica género y no se encuentra nada, dejar que Ollama lo maneje
+      return null; 
+    }
+  } catch (error) {
+    console.error('Error al buscar recomendaciones en la base de datos:', error);
+    return null; // Dejar que el flujo normal continúe
+  }
+}
 
 // Función de respaldo en caso de que Ollama no esté disponible
 async function getFallbackBotResponse(message) {

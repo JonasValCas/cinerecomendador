@@ -139,81 +139,82 @@ async function isModelAvailable() {
 }
 
 /**
- * Genera una respuesta usando el modelo Llama3.1
- * @param {string} prompt - El mensaje del usuario
- * @param {number} [timeout=DEFAULT_TIMEOUT] - Tiempo máximo de espera en ms
- * @returns {Promise<string>} La respuesta generada
+ * Genera una respuesta usando el modelo Llama3.1 a través del endpoint de chat.
+ * @param {Array<object>|string} context - El historial de la conversación o un simple prompt.
+ * @param {number} [timeout=DEFAULT_TIMEOUT] - Tiempo máximo de espera en ms.
+ * @returns {Promise<string>} La respuesta generada.
  */
-async function generateResponse(prompt, timeout = DEFAULT_TIMEOUT) {
-  if (!prompt || prompt.trim() === '') {
+async function generateResponse(context, timeout = DEFAULT_TIMEOUT) {
+  if (!context || (Array.isArray(context) && context.length === 0) || (typeof context === 'string' && context.trim() === '')) {
     return 'Por favor, proporciona un mensaje para que pueda ayudarte.';
   }
-  
-  // Limpiar el prompt para evitar problemas
-  const cleanedPrompt = prompt.trim();
-  
+
   try {
-    console.log('Generando respuesta para prompt:', cleanedPrompt);
-    
     // Verificar disponibilidad (usando caché)
     const serviceAvailable = await isServiceAvailable();
     if (!serviceAvailable) {
       console.log('Servicio Ollama no disponible, retornando mensaje de error');
       return 'Lo siento, el servicio de IA no está disponible en este momento. Por favor, intenta más tarde.';
     }
-    
-    // Verificar disponibilidad del modelo (usando caché)
+
     const modelAvailable = await isModelAvailable();
     if (!modelAvailable) {
-      console.log('Modelo Llama3.1 no disponible, retornando mensaje de error');
-      return 'Lo siento, el modelo de IA no está disponible en este momento. Por favor, intenta más tarde.';
+      console.log(`Modelo ${MODEL_NAME} no disponible, retornando mensaje de error`);
+      return `Lo siento, el modelo de IA (${MODEL_NAME}) no está disponible en este momento. Por favor, intenta más tarde.`;
     }
-    
-    // Preparar contexto para el modelo
-    const systemPrompt = 'Eres un asistente amigable y útil en un sistema de recomendación de películas. ' +
-                        'Responde de manera concisa y amable. Proporciona información precisa sobre películas, ' +
-                        'directores, actores y géneros cinematográficos. Si no conoces la respuesta, ' +
-                        'admítelo honestamente y sugiere buscar en fuentes confiables.';
-    
-    console.log('Enviando solicitud a Ollama API...');
-    
-    // Realizar la solicitud a Ollama con axios
-    const response = await ollamaClient.post('/api/generate', {
+
+    // Preparar el payload para la API de chat de Ollama
+    const systemMessage = {
+      role: 'system',
+      content: 'Eres un asistente experto en cine para un recomendador de películas. ' +
+               'Tu objetivo es ayudar a los usuarios a descubrir películas. ' +
+               'Responde de forma concisa, amigable y directa. ' +
+               'Utiliza el historial de la conversación para entender el contexto y dar respuestas coherentes. ' +
+               'Si no sabes algo, admítelo con naturalidad.'
+    };
+
+    let messages;
+    if (Array.isArray(context)) {
+      messages = [systemMessage, ...context];
+      console.log('Generando respuesta para el contexto:', JSON.stringify(context.slice(-2), null, 2));
+    } else {
+      // Mantener compatibilidad si se envía un string
+      messages = [systemMessage, { role: 'user', content: String(context) }];
+      console.log('Generando respuesta para prompt (modo compatibilidad):', String(context));
+    }
+
+    console.log(`Enviando solicitud a la API /api/chat de Ollama con el modelo ${MODEL_NAME}...`);
+
+    // Realizar la solicitud a Ollama con el endpoint de chat
+    const response = await ollamaClient.post('/api/chat', {
       model: `${MODEL_NAME}:latest`,
-      prompt: cleanedPrompt,
-      system: systemPrompt,
+      messages: messages,
       stream: false
     }, {
       timeout: timeout
     });
-    
+
     // Validar la respuesta
-    if (response.status !== 200 || !response.data) {
-      console.error('Error en la respuesta de Ollama:', response.statusText || 'Sin datos');
-      // Invalidar caché para forzar nueva verificación
-      serviceAvailableCache.timestamp = 0;
+    if (response.status !== 200 || !response.data || !response.data.message || !response.data.message.content) {
+      console.error('Error o respuesta inválida de Ollama:', response.statusText || 'Sin datos o formato incorrecto');
+      serviceAvailableCache.timestamp = 0; // Invalidar caché
       return 'Ocurrió un error al procesar tu solicitud. Por favor, intenta de nuevo.';
     }
-    
-    const data = response.data;
-    if (!data.response) {
-      console.error('Respuesta de Ollama sin contenido');
-      return 'No se pudo generar una respuesta. Por favor, intenta con otra pregunta.';
-    }
-    
-    console.log('Respuesta recibida de Ollama:', data.response.substring(0, 50) + '...');
-    return data.response;
-    
+
+    const botResponse = response.data.message.content;
+    console.log('Respuesta recibida de Ollama:', botResponse.substring(0, 70) + '...');
+    return botResponse;
+
   } catch (error) {
     // Invalidar caché para forzar nueva verificación en caso de error
     serviceAvailableCache.timestamp = 0;
     modelAvailableCache.timestamp = 0;
-    
+
     if (error.code === 'ECONNABORTED') {
       console.error('La solicitud a Ollama excedió el tiempo de espera');
       return 'La solicitud tomó demasiado tiempo. Por favor, intenta con una pregunta más simple o intenta más tarde.';
     }
-    
+
     console.error('Error al generar respuesta con Ollama:', error.message);
     return 'Lo siento, ocurrió un error al procesar tu solicitud. Por favor, intenta de nuevo más tarde.';
   }

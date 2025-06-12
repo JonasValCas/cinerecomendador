@@ -49,7 +49,7 @@
           <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><%= review.titulo %></h5>
             <div>
-              <% if (user && review.userId._id.toString() === user._id.toString()) { %>
+              <% if (user && review.userId && review.userId._id.toString() === user.id) { %>
                 <a href="/reviews/movie/<%= movie._id %>/nueva" class="btn btn-sm btn-outline-secondary">
                   <i class="fas fa-edit"></i> Editar
                 </a>
@@ -65,7 +65,7 @@
             <div class="d-flex justify-content-between align-items-center">
               <div>
                 <small class="text-muted">
-                  <i class="fas fa-user"></i> <%= review.userId.username %> | 
+                  <i class="fas fa-user"></i> <%= review.userId ? review.userId.username : 'Usuario eliminado' %> | 
                   <i class="fas fa-calendar"></i> <%= new Date(review.createdAt).toLocaleDateString() %>
                   <% if (review.createdAt.getTime() !== review.updatedAt.getTime()) { %>
                     | <i class="fas fa-edit"></i> Editado el <%= new Date(review.updatedAt).toLocaleDateString() %>
@@ -73,7 +73,7 @@
                 </small>
               </div>
               
-              <% if (user && user._id.toString() !== review.userId._id.toString()) { %>
+              <% if (user && review.userId && user.id !== review.userId._id.toString()) { %>
                 <div class="review-votes">
                   <button class="btn btn-sm btn-outline-success vote-btn" data-review-id="<%= review._id %>" data-vote="true">
                     <i class="fas fa-thumbs-up"></i> útil (<span class="useful-count"><%= review.votosUtiles %></span>)
@@ -93,7 +93,7 @@
         </div>
         
         <!-- Modal para eliminar reseña -->
-        <% if (user && review.userId._id.toString() === user._id.toString()) { %>
+        <% if (user && review.userId && review.userId._id.toString() === user.id) { %>
           <div class="modal fade" id="deleteReviewModal<%= review._id %>" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog">
               <div class="modal-content">

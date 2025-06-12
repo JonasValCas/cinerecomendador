@@ -25,7 +25,7 @@
           <label for="peliculas" class="form-label">Películas</label>
           <select class="form-select" id="peliculas" name="peliculas" multiple>
             <% movies.forEach(movie => { %>
-              <option value="<%= movie._id %>"><%= movie.titulo %> (<%= movie.anio %>)</option>
+              <option value="<%= movie._id %>" <%= (typeof selectedMovie !== 'undefined' && selectedMovie == movie._id) ? 'selected' : '' %>><%= movie.titulo %> (<%= movie.anio %>)</option>
             <% }); %>
           </select>
           <small class="form-text text-muted">Mantén presionada la tecla Ctrl (o Cmd en Mac) para seleccionar múltiples películas.</small>

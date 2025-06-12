@@ -10,7 +10,7 @@ const validateCollectionOwnership = async (collectionId, userId) => {
   if (!collection) {
     throw new Error('Colección no encontrada');
   }
-  if (!userId.equals(collection.creador)) {
+  if (collection.creador.toString() !== userId) {
     throw new Error('No tienes permiso para modificar esta colección');
   }
   return collection;
@@ -38,7 +38,7 @@ router.get('/', async (req, res) => {
 // Obtener colecciones del usuario actual
 router.get('/mis-colecciones', ensureAuthenticated, async (req, res) => {
   try {
-    const collections = await Collection.find({ creador: req.user._id })
+    const collections = await Collection.find({ creador: req.user.id })
       .populate('peliculas', 'titulo imagen rating');
     
     res.render('collections/mis-colecciones', { 
@@ -57,11 +57,13 @@ router.get('/mis-colecciones', ensureAuthenticated, async (req, res) => {
 router.get('/nueva', ensureAuthenticated, async (req, res) => {
   try {
     const movies = await Movie.find().sort('titulo');
-    
+    const selectedMovie = req.query.pelicula_id || null;
+
     res.render('collections/nueva', { 
       movies, 
       title: 'Crear Nueva Colección',
-      user: req.user
+      user: req.user,
+      selectedMovie
     });
   } catch (err) {
     console.error(err);
@@ -84,7 +86,7 @@ router.post('/nueva', ensureAuthenticated, async (req, res) => {
       nombre,
       descripcion,
       peliculas: Array.isArray(peliculas) ? peliculas : [peliculas].filter(Boolean),
-      creador: req.user._id,
+      creador: req.user.id,
       publica: publica === 'on'
     });
 
@@ -111,7 +113,7 @@ router.get('/:id', async (req, res) => {
       return res.redirect('/collections');
     }
     
-    if (!collection.publica && (!req.user || !req.user._id.equals(collection.creador._id))) {
+    if (!collection.publica && (!req.user || collection.creador._id.toString() !== req.user.id)) {
       req.flash('error', 'No tienes permiso para ver esta colección');
       return res.redirect('/collections');
     }
@@ -120,7 +122,7 @@ router.get('/:id', async (req, res) => {
       collection, 
       title: collection.nombre,
       user: req.user,
-      esCreador: req.user && req.user._id.equals(collection.creador._id)
+      esCreador: req.user && collection.creador._id.toString() === req.user.id
     });
   } catch (err) {
     console.error(err);
@@ -132,7 +134,7 @@ router.get('/:id', async (req, res) => {
 // Formulario para editar colección
 router.get('/:id/editar', ensureAuthenticated, async (req, res) => {
   try {
-    const collection = await validateCollectionOwnership(req.params.id, req.user._id);
+    const collection = await validateCollectionOwnership(req.params.id, req.user.id);
     const movies = await Movie.find().sort('titulo');
     
     res.render('collections/editar', { 
@@ -153,7 +155,7 @@ router.post('/:id/editar', ensureAuthenticated, async (req, res) => {
   try {
     const { nombre, descripcion, peliculas, publica } = req.body;
     
-    const collection = await validateCollectionOwnership(req.params.id, req.user._id);
+    const collection = await validateCollectionOwnership(req.params.id, req.user.id);
 
     collection.nombre = nombre;
     collection.descripcion = descripcion;
@@ -174,7 +176,7 @@ router.post('/:id/editar', ensureAuthenticated, async (req, res) => {
 // Eliminar colección
 router.post('/:id/eliminar', ensureAuthenticated, async (req, res) => {
   try {
-    const collection = await validateCollectionOwnership(req.params.id, req.user._id);
+    const collection = await validateCollectionOwnership(req.params.id, req.user.id);
     
     await Collection.findByIdAndDelete(req.params.id);
     
@@ -195,22 +197,22 @@ router.post('/agregar-pelicula', ensureAuthenticated, async (req, res) => {
     if (collectionId === 'nueva') {
       const { nuevaColeccion } = req.body;
       
-      if (!nuevaColeccion) {
-        req.flash('error', 'Debes proporcionar un nombre para la nueva colección');
+      if (!nuevaColeccion || nuevaColeccion.trim().length < 3) {
+        req.flash('error', 'El nombre de la nueva colección debe tener al menos 3 caracteres.');
         return res.redirect(`/movies/${movieId}`);
       }
       
       const newCollection = new Collection({
         nombre: nuevaColeccion,
         peliculas: [movieId],
-        creador: req.user._id,
+        creador: req.user.id,
         publica: false
       });
       
       await newCollection.save();
       
       req.flash('success', `Película añadida a nueva colección: ${nuevaColeccion}`);
-      return res.redirect(`/movies/${movieId}`);
+      return res.redirect(`/collections/${newCollection._id}`);
     }
 
     const collection = await Collection.findById(collectionId);
@@ -220,7 +222,7 @@ router.post('/agregar-pelicula', ensureAuthenticated, async (req, res) => {
       return res.redirect(`/movies/${movieId}`);
     }
 
-    if (!req.user._id.equals(collection.creador)) {
+    if (collection.creador.toString() !== req.user.id) {
       req.flash('error', 'No tienes permiso para modificar esta colección');
       return res.redirect(`/movies/${movieId}`);
     }
