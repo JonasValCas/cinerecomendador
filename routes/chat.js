@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const ChatMessage = require('../models/Chat');
 const Movie = require('../models/Movie');
 const ollamaService = require('../services/ollamaService');
+const DEFAULT_TIMEOUT = 30000; // 30 segundos
 
 // API endpoint to save a chat message - with validation and logging
 router.post('/message', isAuthenticated, async (req, res) => {
@@ -26,30 +27,27 @@ router.post('/message', isAuthenticated, async (req, res) => {
     const userId = req.session.user._id;
     console.log('Usuario autenticado:', username);
 
-    // 1. Intentar obtener una recomendación directa desde la base de datos
-    let botResponse = await getMovieRecommendation(cleanedMessage);
+    // 1. Obtener contexto de la base de datos (RAG)
+    const dbContext = await getContextFromDB(cleanedMessage);
 
-    // 2. Si no hay recomendación de la BD, usar el servicio de IA (Ollama)
-    if (!botResponse) {
+    // 2. Construir contexto de la conversación (historial)
+    const history = await ChatMessage.find({ userId }).sort({ timestamp: 1 }).limit(10);
+    const conversationContext = history.map(msg => ({
+      role: msg.isBot ? 'assistant' : 'user',
+      content: msg.message
+    }));
+
+    // 3. Añadir el mensaje actual del usuario al contexto de la conversación
+    conversationContext.push({ role: 'user', content: cleanedMessage });
+
+    // 4. Generar respuesta con el servicio de IA, inyectando el contexto de la BD
+    let botResponse;
     try {
-      console.log('Iniciando proceso de generación de respuesta para:', cleanedMessage);
+      console.log('Iniciando generación de respuesta con IA (con contexto de BD si existe)...');
       
-      // Construir un contexto con el historial de chat
-      const history = await ChatMessage.find({ userId }).sort({ timestamp: 1 }).limit(10);
-      
-      const context = history.map(msg => ({
-        role: msg.isBot ? 'assistant' : 'user',
-        content: msg.message
-      }));
-
-      // Añadir el mensaje actual del usuario al contexto
-      context.push({ role: 'user', content: cleanedMessage });
-
-      console.log('Enviando a Ollama con contexto:', JSON.stringify(context, null, 2));
-
-      // Intentar obtener respuesta de Ollama con el contexto completo
-      botResponse = await ollamaService.generateResponse(context);
-      console.log('Respuesta recibida:', botResponse.substring(0, 50) + '...');
+      // El contexto de la BD se pasa como un argumento separado a generateResponse
+      botResponse = await ollamaService.generateResponse(conversationContext, DEFAULT_TIMEOUT, dbContext);
+      console.log('Respuesta recibida de Ollama:', botResponse.substring(0, 50) + '...');
       
       // Verificar si la respuesta indica que el servicio no está disponible
       if (botResponse.includes('servicio de IA no está disponible') || 
@@ -72,7 +70,6 @@ router.post('/message', isAuthenticated, async (req, res) => {
       console.log('Usando sistema de respaldo debido a error en Ollama');
       botResponse = await getFallbackBotResponse(cleanedMessage);
       console.log('Respuesta del bot generada con sistema de respaldo:', botResponse.substring(0, 50) + '...');
-    }
     }
 
     // Crear objetos de mensaje para usuario y bot
@@ -161,68 +158,31 @@ router.get('/history', isAuthenticated, async (req, res) => {
   }
 });
 
-// Función para obtener recomendaciones de la base de datos
-async function getMovieRecommendation(message) {
-  const lowerCaseMessage = message.toLowerCase();
-  
-  const wantsRecommendation = 
-    lowerCaseMessage.includes('recomienda') ||
-    lowerCaseMessage.includes('sugiere') ||
-    lowerCaseMessage.includes('dame una película') ||
-    lowerCaseMessage.includes('película de');
-
-  if (!wantsRecommendation) {
-    return null; // No es una solicitud de recomendación
-  }
-
-  // Extraer género si se especifica
-  const genreRegex = /de (\w+)/;
-  const genreMatch = lowerCaseMessage.match(genreRegex);
-  let query = {};
-  let genre = null;
-
-  if (genreMatch && genreMatch[1]) {
-    const extractedGenre = genreMatch[1].trim();
-    // Mapeo simple de géneros para que coincida con la base de datos
-    const genreMap = {
-      'accion': 'Acción',
-      'comedia': 'Comedia',
-      'drama': 'Drama',
-      'terror': 'Terror',
-      'ciencia ficcion': 'Ciencia Ficción',
-      'romance': 'Romance',
-      'aventura': 'Aventura',
-      'fantasia': 'Fantasía',
-      'misterio': 'Misterio',
-      'suspenso': 'Suspenso',
-    };
-    genre = genreMap[extractedGenre];
-    if (genre) {
-      query.genero = genre;
-    }
-  }
-
+// Función para obtener contexto de la base de datos usando búsqueda de texto (RAG)
+async function getContextFromDB(message) {
   try {
-    console.log(`Buscando recomendaciones en la BD con query:`, query);
-    const movies = await Movie.find(query).sort({ rating: -1 }).limit(3);
+    // Realizar una búsqueda de texto en la colección de películas
+    const movies = await Movie.find(
+      { $text: { $search: message } },
+      { score: { $meta: 'textScore' } } // Proyectar el score de relevancia
+    ).sort({ score: { $meta: 'textScore' } }).limit(3); // Ordenar por relevancia y limitar
 
     if (movies.length > 0) {
-      const movieTitles = movies.map(m => m.titulo).join(', ');
-      if (genre) {
-        return `¡Claro! Te recomiendo estas películas de ${genre} de nuestra base de datos: ${movieTitles}.`;
-      } else {
-        return `Por supuesto, aquí tienes algunas recomendaciones de nuestra base de datos: ${movieTitles}.`;
-      }
+      console.log(`Encontradas ${movies.length} películas relevantes en la BD para el mensaje: "${message}"`);
+      // Formatear los resultados para inyectarlos en el prompt
+      const context = movies.map(m => 
+        `{título: "${m.titulo}", género: "${m.genero}", año: ${m.anio}, sinopsis: "${m.descripcion}"}`
+      ).join('; ');
+      
+      // Devolvemos el contexto formateado para ser usado en el system prompt
+      return `Contexto de la base de datos: [${context}]`;
     } else {
-      if (genre) {
-        return `Lo siento, no encontré películas del género '${genre}' en nuestra base de datos. Puedes probar con otro género.`;
-      }
-      // Si no se especifica género y no se encuentra nada, dejar que Ollama lo maneje
-      return null; 
+      console.log('No se encontró contexto relevante en la BD para el mensaje.');
+      return null;
     }
   } catch (error) {
-    console.error('Error al buscar recomendaciones en la base de datos:', error);
-    return null; // Dejar que el flujo normal continúe
+    console.error('Error al obtener contexto de la base de datos:', error);
+    return null; // En caso de error, continuar sin contexto adicional
   }
 }
 

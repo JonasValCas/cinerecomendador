@@ -144,7 +144,7 @@ async function isModelAvailable() {
  * @param {number} [timeout=DEFAULT_TIMEOUT] - Tiempo máximo de espera en ms.
  * @returns {Promise<string>} La respuesta generada.
  */
-async function generateResponse(context, timeout = DEFAULT_TIMEOUT) {
+async function generateResponse(context, timeout = DEFAULT_TIMEOUT, dbContext = null) {
   if (!context || (Array.isArray(context) && context.length === 0) || (typeof context === 'string' && context.trim() === '')) {
     return 'Por favor, proporciona un mensaje para que pueda ayudarte.';
   }
@@ -164,13 +164,23 @@ async function generateResponse(context, timeout = DEFAULT_TIMEOUT) {
     }
 
     // Preparar el payload para la API de chat de Ollama
+    let systemPrompt = 'Eres un asistente experto en cine para un recomendador de películas. ' +
+                       'Tu objetivo es ayudar a los usuarios a descubrir películas. ' +
+                       'Responde de forma concisa, amigable y directa. ' +
+                       'Utiliza el historial de la conversación para entender el contexto y dar respuestas coherentes. ' +
+                       'Si no sabes algo, admítelo con naturalidad.';
+
+    // Si tenemos contexto de la BD, lo añadimos al system prompt (RAG)
+    if (dbContext) {
+      console.log('Inyectando contexto de la BD en el system prompt.');
+      systemPrompt += `\n\nIMPORTANTE: Basa tu respuesta principalmente en la siguiente información de nuestra base de datos: ${dbContext}. ` +
+                      'Usa estos datos para responder a la pregunta del usuario de forma precisa. ' +
+                      'Si la información proporcionada no es suficiente, puedes usar tu conocimiento general.';
+    }
+
     const systemMessage = {
       role: 'system',
-      content: 'Eres un asistente experto en cine para un recomendador de películas. ' +
-               'Tu objetivo es ayudar a los usuarios a descubrir películas. ' +
-               'Responde de forma concisa, amigable y directa. ' +
-               'Utiliza el historial de la conversación para entender el contexto y dar respuestas coherentes. ' +
-               'Si no sabes algo, admítelo con naturalidad.'
+      content: systemPrompt
     };
 
     let messages;

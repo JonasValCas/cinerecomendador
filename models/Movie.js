@@ -44,4 +44,7 @@ const movieSchema = new mongoose.Schema({
   timestamps: true // Crea createdAt y updatedAt automáticamente
 });
 
+// Crear un índice de texto para búsquedas eficientes en título, descripción y género
+movieSchema.index({ titulo: 'text', descripcion: 'text', genero: 'text' });
+
 module.exports = mongoose.model('Movie', movieSchema);
