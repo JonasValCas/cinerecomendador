@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 const ChatMessage = require('../models/Chat');
 const Movie = require('../models/Movie');
 const ollamaService = require('../services/ollamaService');
-const DEFAULT_TIMEOUT = 30000; // 30 segundos
+const DEFAULT_TIMEOUT = 60000; // 60 segundos
 
 // API endpoint to save a chat message - with validation and logging
 router.post('/message', isAuthenticated, async (req, res) => {

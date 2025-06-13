@@ -8,7 +8,7 @@ const axios = require('axios');
 // Configuración
 const OLLAMA_BASE_URL = 'http://localhost:11434';
 const MODEL_NAME = 'llama3.1';
-const DEFAULT_TIMEOUT = 30000; // 30 segundos
+const DEFAULT_TIMEOUT = 90000; // 90 segundos
 const VERIFICATION_TIMEOUT = 5000; // Timeout para verificaciones (más corto)
 
 // Crear una instancia de axios con configuración base
@@ -168,7 +168,10 @@ async function generateResponse(context, timeout = DEFAULT_TIMEOUT, dbContext = 
                        'Tu objetivo es ayudar a los usuarios a descubrir películas. ' +
                        'Responde de forma concisa, amigable y directa. ' +
                        'Utiliza el historial de la conversación para entender el contexto y dar respuestas coherentes. ' +
-                       'Si no sabes algo, admítelo con naturalidad.';
+                       'Si no sabes algo, admítelo con naturalidad.'+
+                       'IMPORTANTE: Tu conocimiento se limita estrictamente a películas, directores, actores y temas relacionados con el cine. ' +
+                       'Si un usuario te pregunta sobre ciencia, política, matemáticas, debes declinar amablemente la pregunta y redirigir la conversación de vuelta al cine. ' +
+                       'Por ejemplo, puedes decir: "Mi especialidad es el cine. ¿Hay alguna película sobre la que te gustaría conversar?".';
 
     // Si tenemos contexto de la BD, lo añadimos al system prompt (RAG)
     if (dbContext) {
